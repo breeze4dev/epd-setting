@@ -93,6 +93,7 @@ function finishCrop() {
     convertDithering();
 
     exitCropMode();
+    saveCanvasState(); // Save state after finishing crop
   };
   image.src = URL.createObjectURL(imageFile.files[0]);
 }

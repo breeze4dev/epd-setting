@@ -15,6 +15,75 @@ let dragOffsetY = 0;
 let textBold = false; // Track if text should be bold
 let textItalic = false; // Track if text should be italic
 
+// History management for undo/redo
+let canvasHistory = [];
+let historyStep = -1;
+const MAX_HISTORY = 50; // Limit history to prevent memory issues
+
+function saveCanvasState() {
+  // Remove any history after current step (for when we undo then make new changes)
+  historyStep++;
+  if (historyStep < canvasHistory.length) {
+    canvasHistory.length = historyStep;
+  }
+  
+  // Save current state (canvas data + text/line elements)
+  const state = {
+    canvasData: ctx.getImageData(0, 0, canvas.width, canvas.height),
+    textElements: JSON.parse(JSON.stringify(textElements)),
+    lineSegments: JSON.parse(JSON.stringify(lineSegments))
+  };
+  
+  canvasHistory.push(state);
+  
+  // Limit history size
+  if (canvasHistory.length > MAX_HISTORY) {
+    canvasHistory.shift();
+    historyStep--;
+  }
+  
+  updateHistoryButtons();
+}
+
+function undo() {
+  if (historyStep > 0) {
+    historyStep--;
+    restoreCanvasState(canvasHistory[historyStep]);
+    updateHistoryButtons();
+  }
+}
+
+function redo() {
+  if (historyStep < canvasHistory.length - 1) {
+    historyStep++;
+    restoreCanvasState(canvasHistory[historyStep]);
+    updateHistoryButtons();
+  }
+}
+
+function restoreCanvasState(state) {
+  if (!state) return;
+  
+  // Restore canvas data
+  ctx.putImageData(state.canvasData, 0, 0);
+  
+  // Restore text and line elements
+  textElements = JSON.parse(JSON.stringify(state.textElements));
+  lineSegments = JSON.parse(JSON.stringify(state.lineSegments));
+}
+
+function updateHistoryButtons() {
+  const undoBtn = document.getElementById('undo-btn');
+  const redoBtn = document.getElementById('redo-btn');
+  
+  if (undoBtn) {
+    undoBtn.disabled = historyStep <= 0;
+  }
+  if (redoBtn) {
+    redoBtn.disabled = historyStep >= canvasHistory.length - 1;
+  }
+}
+
 function setCanvasTitle(title) {
   const canvasTitle = document.querySelector('.canvas-title');
   if (canvasTitle) {
@@ -72,6 +141,10 @@ function initPaintTools() {
     document.getElementById('text-italic').classList.toggle('primary', textItalic);
   });
   
+  // Undo/Redo buttons
+  document.getElementById('undo-btn').addEventListener('click', undo);
+  document.getElementById('redo-btn').addEventListener('click', redo);
+  
   canvas.addEventListener('mousedown', startPaint);
   canvas.addEventListener('mousemove', paint);
   canvas.addEventListener('mouseup', endPaint);
@@ -82,6 +155,9 @@ function initPaintTools() {
   canvas.addEventListener('touchstart', onTouchStart);
   canvas.addEventListener('touchmove', onTouchMove);
   canvas.addEventListener('touchend', onTouchEnd);
+  
+  // Save initial canvas state
+  saveCanvasState();
 }
 
 function setActiveTool(tool, title) {
@@ -131,10 +207,18 @@ function startPaint(e) {
 }
 
 function endPaint() {
+  const wasPainting = painting;
+  const wasDraggingText = isDraggingText;
+  
   painting = false;
   isDraggingText = false;
   lastX = 0;
   lastY = 0;
+  
+  // Save state after drawing or dragging text
+  if (wasPainting || wasDraggingText) {
+    saveCanvasState();
+  }
 }
 
 function paint(e) {
@@ -363,6 +447,9 @@ function placeText(e) {
   ctx.font = newText.font;
   ctx.fillStyle = newText.color;
   ctx.fillText(newText.text, newText.x, newText.y);
+  
+  // Save state after adding text
+  saveCanvasState();
   
   // Reset
   document.getElementById('text-input').value = '';

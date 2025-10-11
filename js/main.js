@@ -642,6 +642,7 @@ function updateImage() {
       redrawTextElements();
       redrawLineSegments();
       convertDithering();
+      saveCanvasState(); // Save state after loading image
     } else {
       alert("图片宽高比例与画布不匹配，将进入裁剪模式。\n请放大图片后移动图片使其充满画布，再点击“完成”按钮。");
       setActiveTool(null, '');
@@ -786,6 +787,7 @@ function rotateCanvas() {
   canvas.height = currentWidth;
   addLog(`画布已旋转: ${currentWidth}x${currentHeight} -> ${canvas.width}x${canvas.height}`);
   updateImage();
+  saveCanvasState(); // Save state after rotating
 }
 
 // Auto-rotate canvas for screens where width > height (landscape screens)
@@ -824,6 +826,7 @@ function clearCanvas() {
     textElements = []; // Clear stored text positions
     lineSegments = []; // Clear stored line segments
     if (isCropMode()) exitCropMode();
+    saveCanvasState(); // Save state after clearing
     return true;
   }
   return false;
