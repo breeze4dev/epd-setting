@@ -872,19 +872,23 @@ function initEventHandlers() {
 }
 
 function checkDebugMode() {
-  const link = document.getElementById('debug-toggle');
   const urlParams = new URLSearchParams(window.location.search);
   const debugMode = urlParams.get('debug');
+  const link = document.getElementById('debug-toggle');
 
   if (debugMode === 'true') {
     document.body.classList.add('debug-mode');
-    link.innerHTML = '正常模式';
-    link.setAttribute('href', window.location.pathname);
+    if (link) {
+      link.innerHTML = '正常模式';
+      link.setAttribute('href', window.location.pathname);
+    }
     addLog("注意：开发模式功能已开启！不懂请不要随意修改，否则后果自负！");
   } else {
     document.body.classList.remove('debug-mode');
-    link.innerHTML = '开发模式';
-    link.setAttribute('href', window.location.pathname + '?debug=true');
+    if (link) {
+      link.innerHTML = '开发模式';
+      link.setAttribute('href', window.location.pathname + '?debug=true');
+    }
   }
 }
 

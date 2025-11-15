@@ -58,6 +58,18 @@
 					<button id="clearscreenbutton" type="button" class="secondary" onclick="clearScreen()">清除屏幕</button>
 					<button id="debugcalendarbutton" type="button" class="secondary" onclick="showDebugCalendar()">选择日期</button>
                 </div>
+                <div class="flex-group debug">
+                    <label for="ledSelect">时钟LED闪烁:</label>
+                    <select id="ledSelect" onchange="updateClockLed(this)">
+                        <option value="0">不闪烁</option>
+                        <option value="1">每分钟闪烁</option>
+                        <option value="2">每5分钟闪烁</option>
+                        <option value="3">每10分钟闪烁</option>
+                        <option value="4">每15分钟闪烁</option>
+                        <option value="5">每30分钟闪烁</option>
+                        <option value="6">每小时闪烁</option>
+                    </select>
+                </div>
                 <div class="flex-group right debug">
                     <input type="text" id="cmdTXT" value="">
                     <button id="sendcmdbutton" type="button" class="primary" onclick="sendcmd()">发送命令</button>
