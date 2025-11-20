@@ -291,7 +291,7 @@ async function setDriver() {
 
 async function syncTime(mode) {
   if (mode === 2) {
-    if (!confirm('提醒：时钟模式目前使用全刷实现，仅供体验，不建议长期开启，是否继续?')) return;
+    if (!confirm('提醒：时钟模式比较费电，并且会缩短屏幕寿命，不建议长期开启，是否继续?')) return;
   }
   const timestamp = new Date().getTime() / 1000;
   const data = new Uint8Array([
@@ -323,6 +323,34 @@ async function sendcmd() {
   await write(bytes[0], bytes.length > 1 ? bytes.slice(1) : null);
 }
 
+// Rotate ImageData 90 degrees counterclockwise
+function rotateImageDataCounterclockwise(imageData) {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+  
+  // Create new ImageData with swapped dimensions
+  const rotatedImageData = new ImageData(height, width);
+  const rotatedData = rotatedImageData.data;
+  
+  // Rotate counterclockwise: (x, y) -> (y, width - 1 - x)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const srcIndex = (y * width + x) * 4;
+      const dstX = y;
+      const dstY = width - 1 - x;
+      const dstIndex = (dstY * height + dstX) * 4;
+      
+      rotatedData[dstIndex] = data[srcIndex];         // R
+      rotatedData[dstIndex + 1] = data[srcIndex + 1]; // G
+      rotatedData[dstIndex + 2] = data[srcIndex + 2]; // B
+      rotatedData[dstIndex + 3] = data[srcIndex + 3]; // A
+    }
+  }
+  
+  return rotatedImageData;
+}
+
 async function sendimg() {
   if (!canvas || !ctx) {
     addLog("画布未初始化，无法发送图片");
@@ -350,7 +378,15 @@ async function sendimg() {
   const status = document.getElementById("status");
   status.parentElement.style.display = "block";
 
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  
+  // If canvas is landscape (width > height), it means user rotated the canvas clockwise
+  // The device expects portrait orientation data, so we need to rotate counterclockwise
+  if (canvas.width > canvas.height) {
+    imageData = rotateImageDataCounterclockwise(imageData);
+    addLog(`检测到横屏画布(${canvas.width}x${canvas.height})，已旋转图像数据为竖屏方向`);
+  }
+  
   const processedData = processImageData(imageData, ditherMode);
 
   updateButtonStatus(true);
@@ -644,7 +680,7 @@ function updateImage() {
       convertDithering();
       saveCanvasState(); // Save state after loading image
     } else {
-      alert("图片宽高比例与画布不匹配，将进入裁剪模式。\n请放大图片后移动图片使其充满画布，再点击“完成”按钮。");
+      // alert("图片宽高比例与画布不匹配，将进入裁剪模式。\n请放大图片后移动图片使其充满画布，再点击“完成”按钮。");
       setActiveTool(null, '');
       initializeCrop();
     }
@@ -652,21 +688,67 @@ function updateImage() {
   image.src = URL.createObjectURL(imageFile.files[0]);
 }
 
-function updateCanvasSize() {
+function updateCanvasSize(sizeNameOverride) {
   // Check if canvas is initialized
   if (!canvas) {
     console.log("Canvas not initialized yet, skipping updateCanvasSize");
+    addLog("Canvas not initialized yet, skipping updateCanvasSize");
     return;
   }
   
-  const selectedSizeName = document.getElementById('canvasSize').value;
+  // Use override value if provided, otherwise read from DOM
+  const selectedSizeName = sizeNameOverride || document.getElementById('canvasSize').value;
+  console.log("updateCanvasSize: sizeNameOverride =", sizeNameOverride);
+  console.log("updateCanvasSize: selectedSizeName =", selectedSizeName);
+  console.log("updateCanvasSize: DOM value =", document.getElementById('canvasSize').value);
+  console.log("updateCanvasSize: available canvasSizes =", canvasSizes.map(s => s.name));
+  addLog(`更新画布尺寸: 选择的尺寸名称 = "${selectedSizeName}"`);
+  
+  if (!selectedSizeName || selectedSizeName.trim() === '') {
+    addLog(`错误: 画布尺寸名称为空`);
+    return;
+  }
+  
   const selectedSize = canvasSizes.find(size => size.name === selectedSizeName);
 
   if (!selectedSize) {
     console.log("Selected size not found:", selectedSizeName);
+    console.log("Available sizes:", canvasSizes.map(s => s.name));
+    addLog(`错误: 未找到画布尺寸 "${selectedSizeName}"`);
+    addLog(`可用的尺寸: ${canvasSizes.map(s => s.name).join(", ")}`);
+    
+    // Try to find a similar size by matching the prefix (e.g., "2.13_250_134" -> "2.13_250_122")
+    let fallbackSize = null;
+    if (selectedSizeName) {
+      const parts = selectedSizeName.split('_');
+      if (parts.length >= 2) {
+        const prefix = parts[0]; // e.g., "2.13"
+        fallbackSize = canvasSizes.find(size => size.name.startsWith(prefix + '_'));
+        if (fallbackSize) {
+          console.log("Found fallback size:", fallbackSize.name);
+          addLog(`找到相似尺寸: ${fallbackSize.name} (${fallbackSize.width}x${fallbackSize.height})`);
+        }
+      }
+    }
+    
+    // If no fallback found, use the first available
+    if (!fallbackSize && canvasSizes.length > 0) {
+      fallbackSize = canvasSizes[0];
+      addLog(`使用默认尺寸: ${fallbackSize.name} (${fallbackSize.width}x${fallbackSize.height})`);
+    }
+    
+    if (fallbackSize) {
+      document.getElementById('canvasSize').value = fallbackSize.name;
+      canvas.width = fallbackSize.width;
+      canvas.height = fallbackSize.height;
+      updateImage();
+    }
     return;
   }
 
+  console.log("updateCanvasSize: found size =", selectedSize);
+  addLog(`设置画布尺寸: ${selectedSize.name} (${selectedSize.width}x${selectedSize.height})`);
+  
   canvas.width = selectedSize.width;
   canvas.height = selectedSize.height;
 
@@ -682,12 +764,21 @@ function updateDitcherOptions() {
   const colorMode = selectedOption.getAttribute('data-color');
   const canvasSize = selectedOption.getAttribute('data-size');
 
+  console.log("updateDitcherOptions: colorMode =", colorMode, "canvasSize =", canvasSize);
+  addLog(`更新驱动选项: 颜色模式 = ${colorMode}, 画布尺寸 = ${canvasSize}`);
+
   if (colorMode) document.getElementById('ditherMode').value = colorMode;
-  if (canvasSize) document.getElementById('canvasSize').value = canvasSize;
+  if (canvasSize) {
+    console.log("updateDitcherOptions: setting canvasSize to", canvasSize);
+    const canvasSizeElement = document.getElementById('canvasSize');
+    canvasSizeElement.value = canvasSize;
+    console.log("updateDitcherOptions: canvasSize element value after setting =", canvasSizeElement.value);
+  }
 
   // Only update canvas if it's initialized
   if (canvas) {
-    updateCanvasSize(); // always update image
+    // Pass canvasSize directly to avoid timing issues
+    updateCanvasSize(canvasSize); // always update image
     
     // Auto-rotate canvas if needed for landscape screens
     if (canvasSize) {
@@ -716,12 +807,17 @@ function updateUIForDevice() {
   
   // Update canvas size based on device dimensions
   const canvasSize = document.getElementById("canvasSize");
-  const sizeString = `${deviceInfo.width}_${deviceInfo.height}`;
   
-  // First try to find exact match
+  // Try both orientations: width_height and height_width
+  const sizeString1 = `${deviceInfo.width}_${deviceInfo.height}`;
+  const sizeString2 = `${deviceInfo.height}_${deviceInfo.width}`;
+  
+  // First try to find exact match (check both orientations)
   let foundMatch = false;
   for (let i = 0; i < canvasSize.options.length; i++) {
-    if (canvasSize.options[i].value.includes(sizeString)) {
+    const optionValue = canvasSize.options[i].value;
+    // Check if option contains either orientation
+    if (optionValue.includes(sizeString1) || optionValue.includes(sizeString2)) {
       canvasSize.selectedIndex = i;
       addLog(`自动选择画布尺寸: ${canvasSize.options[i].text}`);
       foundMatch = true;
@@ -733,7 +829,7 @@ function updateUIForDevice() {
   if (!foundMatch) {
     addLog(`设备尺寸 ${deviceInfo.width}x${deviceInfo.height} 未找到精确匹配，尝试选择最接近的尺寸`);
     
-    // Find the closest available size
+    // Find the closest available size (check both orientations)
     let closestIndex = 0;
     let minDifference = Infinity;
     
@@ -744,7 +840,11 @@ function updateUIForDevice() {
       if (parts.length >= 3) {
         const optionWidth = parseInt(parts[1]);
         const optionHeight = parseInt(parts[2]);
-        const difference = Math.abs(optionWidth - deviceInfo.width) + Math.abs(optionHeight - deviceInfo.height);
+        
+        // Calculate difference for both orientations
+        const diff1 = Math.abs(optionWidth - deviceInfo.width) + Math.abs(optionHeight - deviceInfo.height);
+        const diff2 = Math.abs(optionWidth - deviceInfo.height) + Math.abs(optionHeight - deviceInfo.width);
+        const difference = Math.min(diff1, diff2);
         
         if (difference < minDifference) {
           minDifference = difference;
@@ -776,23 +876,120 @@ function updateUIForDevice() {
 }
 
 function rotateCanvas() {
-  if (!canvas) {
+  if (!canvas || !ctx) {
     addLog("画布未初始化，无法旋转");
     return;
   }
   
   const currentWidth = canvas.width;
   const currentHeight = canvas.height;
+  
+  // Save old coordinates before updating
+  const oldTextElements = JSON.parse(JSON.stringify(textElements));
+  const oldLineSegments = JSON.parse(JSON.stringify(lineSegments));
+  
+  // Save current canvas content
+  const imageData = ctx.getImageData(0, 0, currentWidth, currentHeight);
+  
+  // Create a temporary canvas to hold the original content
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = currentWidth;
+  tempCanvas.height = currentHeight;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx.putImageData(imageData, 0, 0);
+  
+  // Clear text and lines from temp canvas by drawing white rectangles over them
+  tempCtx.fillStyle = 'white';
+  oldTextElements.forEach(text => {
+    tempCtx.font = text.font;
+    const textWidth = tempCtx.measureText(text.text).width;
+    const fontSizeMatch = text.font.match(/(\d+)px/);
+    const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1]) : 14;
+    const textHeight = fontSize * 1.2;
+    tempCtx.fillRect(text.x - 2, text.y - textHeight - 2, textWidth + 4, textHeight + 4);
+  });
+  
+  // Clear lines from temp canvas
+  oldLineSegments.forEach(segment => {
+    tempCtx.strokeStyle = 'white';
+    tempCtx.lineWidth = segment.size + 2;
+    tempCtx.beginPath();
+    if (segment.type === 'dot') {
+      tempCtx.moveTo(segment.x, segment.y);
+      tempCtx.lineTo(segment.x + 0.1, segment.y + 0.1);
+    } else {
+      tempCtx.moveTo(segment.x1, segment.y1);
+      tempCtx.lineTo(segment.x2, segment.y2);
+    }
+    tempCtx.stroke();
+  });
+  
+  // Swap canvas dimensions
   canvas.width = currentHeight;
   canvas.height = currentWidth;
-  addLog(`画布已旋转: ${currentWidth}x${currentHeight} -> ${canvas.width}x${canvas.height}`);
-  updateImage();
-  saveCanvasState(); // Save state after rotating
+  
+  // Clear the canvas completely
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Rotate and draw the image (clockwise 90 degrees)
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(Math.PI / 2); // 90 degrees clockwise
+  ctx.drawImage(tempCanvas, -currentWidth / 2, -currentHeight / 2);
+  ctx.restore();
+  
+  // Update coordinates for text elements (clockwise 90 degrees)
+  // Formula: (x, y) -> (height - y, x)
+  textElements.forEach((text, index) => {
+    const oldX = oldTextElements[index].x;
+    const oldY = oldTextElements[index].y;
+    text.x = currentHeight - oldY;
+    text.y = oldX;
+  });
+  
+  // Update coordinates for line segments (clockwise 90 degrees)
+  lineSegments.forEach((segment, index) => {
+    if (segment.type === 'dot') {
+      const oldX = oldLineSegments[index].x;
+      const oldY = oldLineSegments[index].y;
+      segment.x = currentHeight - oldY;
+      segment.y = oldX;
+    } else {
+      const oldX1 = oldLineSegments[index].x1;
+      const oldY1 = oldLineSegments[index].y1;
+      const oldX2 = oldLineSegments[index].x2;
+      const oldY2 = oldLineSegments[index].y2;
+      segment.x1 = currentHeight - oldY1;
+      segment.y1 = oldX1;
+      segment.x2 = currentHeight - oldY2;
+      segment.y2 = oldX2;
+    }
+  });
+  
+  // Redraw text and line elements at new coordinates
+  redrawTextElements();
+  redrawLineSegments();
+  
+  // Clear history to prevent undo/redo conflicts with rotation
+  clearHistory();
+  
+  // Save current state as the new initial state
+  saveCanvasState();
+  
+  // If there's an image file, reload it to fit the new canvas size
+  const imageFile = document.getElementById('imageFile');
+  if (imageFile.files.length > 0) {
+    updateImage();
+  }
+  
+  addLog(`画布已顺时针旋转: ${currentWidth}x${currentHeight} -> ${canvas.width}x${canvas.height}`);
+  addLog("历史记录已清空，无法撤销到旋转前的状态");
 }
 
 // Auto-rotate canvas for screens where width > height (landscape screens)
 function autoRotateCanvasIfNeeded(sizeName) {
-  if (!canvas) {
+  if (!canvas || !ctx) {
     return false;
   }
   
@@ -808,8 +1005,75 @@ function autoRotateCanvasIfNeeded(sizeName) {
     
     // Only rotate if current orientation is landscape (width > height)
     if (currentWidth > currentHeight) {
+      // Check if canvas has content (not just white)
+      const imageData = ctx.getImageData(0, 0, currentWidth, currentHeight);
+      const hasContent = imageData.data.some((value, index) => {
+        // Check if pixel is not white (skip alpha channel)
+        if (index % 4 === 3) return false; // Skip alpha
+        return value < 255;
+      });
+      
+      if (hasContent) {
+        // If canvas has content, rotate it properly
+        // Create a temporary canvas to hold the original image
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = currentWidth;
+        tempCanvas.height = currentHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.putImageData(imageData, 0, 0);
+        
+        // Swap canvas dimensions
       canvas.width = currentHeight;
       canvas.height = currentWidth;
+        
+        // Clear the canvas
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Rotate and draw the image (counterclockwise 90 degrees)
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-Math.PI / 2); // 90 degrees counterclockwise
+        ctx.drawImage(tempCanvas, -currentWidth / 2, -currentHeight / 2);
+        ctx.restore();
+        
+        // Rotate text elements coordinates (counterclockwise 90 degrees)
+        // Formula: (x, y) -> (y, width - x)
+        textElements.forEach(text => {
+          const oldX = text.x;
+          const oldY = text.y;
+          text.x = oldY;
+          text.y = currentWidth - oldX;
+        });
+        
+        // Rotate line segments coordinates (counterclockwise 90 degrees)
+        lineSegments.forEach(segment => {
+          if (segment.type === 'dot') {
+            const oldX = segment.x;
+            const oldY = segment.y;
+            segment.x = oldY;
+            segment.y = currentWidth - oldX;
+          } else {
+            const oldX1 = segment.x1;
+            const oldY1 = segment.y1;
+            const oldX2 = segment.x2;
+            const oldY2 = segment.y2;
+            segment.x1 = oldY1;
+            segment.y1 = currentWidth - oldX1;
+            segment.x2 = oldY2;
+            segment.y2 = currentWidth - oldX2;
+          }
+        });
+        
+        // Redraw text and line elements on rotated canvas
+        redrawTextElements();
+        redrawLineSegments();
+      } else {
+        // If canvas is empty, just swap dimensions
+        canvas.width = currentHeight;
+        canvas.height = currentWidth;
+      }
+      
       addLog(`画布已自动旋转90度: ${currentWidth}x${currentHeight} -> ${canvas.width}x${canvas.height}`);
       
       // Redraw the image after rotation
@@ -857,7 +1121,22 @@ function convertDithering() {
 
 function initEventHandlers() {
   document.getElementById("epddriver").addEventListener("change", updateDitcherOptions);
-  document.getElementById("imageFile").addEventListener("change", updateImage);
+  const imageFileInput = document.getElementById("imageFile");
+  imageFileInput.addEventListener("change", function() {
+    updateImage();
+  });
+  // Fix: allow re-selecting the same file by clearing value on mousedown
+  // This allows the change event to fire even when selecting the same file
+  imageFileInput.addEventListener("mousedown", function() {
+    if (this.files.length > 0) {
+      // Store the current file before clearing
+      const currentFile = this.files[0];
+      // Clear value to allow change event to fire
+      this.value = '';
+      // If user cancels, we can't restore, but that's okay
+      // The change event will handle the new selection
+    }
+  });
   document.getElementById("ditherMode").addEventListener("change", finishCrop);
   document.getElementById("ditherAlg").addEventListener("change", finishCrop);
   document.getElementById("ditherStrength").addEventListener("input", function () {

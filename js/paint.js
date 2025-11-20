@@ -84,6 +84,12 @@ function updateHistoryButtons() {
   }
 }
 
+function clearHistory() {
+  canvasHistory = [];
+  historyStep = -1;
+  updateHistoryButtons();
+}
+
 function setCanvasTitle(title) {
   const canvasTitle = document.querySelector('.canvas-title');
   if (canvasTitle) {
