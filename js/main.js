@@ -1,6 +1,7 @@
 let bleDevice, gattServer;
 let epdService, epdCharacteristic;
 let startTime, msgIndex, appVersion;
+let firmwareVersion = null;  // Additional firmware version from config
 let canvas, ctx, textDecoder;
 
 // Device information
@@ -24,7 +25,10 @@ const EpdCmd = {
   SLEEP:     0x06,
 
   SET_TIME:  0x20,
+  SET_WEEK_START: 0x21,
   SET_ROTATION: 0x22,
+  LED_CTRL:  0x23,
+  SET_SHOW_DEVICE_ID: 0x24,
 
   WRITE_IMG: 0x30, // v1.6
 
@@ -231,6 +235,7 @@ function resetVariables() {
   epdService = null;
   epdCharacteristic = null;
   msgIndex = 0;
+  firmwareVersion = null;  // Reset firmware version
   document.getElementById("log").value = '';
 }
 
@@ -478,11 +483,20 @@ function updateButtonStatus(forceDisabled = false) {
   document.getElementById("clearscreenbutton").disabled = status;
   document.getElementById("sendimgbutton").disabled = status;
   document.getElementById("setDriverbutton").disabled = status;
+  const ledSelect = document.getElementById("ledSelect");
+  if (ledSelect) ledSelect.disabled = !!status;
+  const showDeviceIdSelect = document.getElementById("showDeviceIdSelect");
+  if (showDeviceIdSelect) showDeviceIdSelect.disabled = !!status;
 }
 
 function disconnect() {
   updateButtonStatus();
   resetVariables();
+  // Hide feature options when disconnecting (they will be shown again if device supports them)
+  const ledGroup = document.getElementById('ledSelectGroup');
+  if (ledGroup) ledGroup.style.display = 'none';
+  const deviceIdGroup = document.getElementById('showDeviceIdGroup');
+  if (deviceIdGroup) deviceIdGroup.style.display = 'none';
   addLog('已断开连接.');
   document.getElementById("connectbutton").innerHTML = '连接';
 }
@@ -556,7 +570,90 @@ function handleNotify(value, idx) {
         addLog(`设备信息: 型号=${deviceInfo.modelId}, 尺寸=${deviceInfo.width}x${deviceInfo.height}`);
         updateUIForDevice();
       }
+    } else if (msg.startsWith('led=') && msg.length > 4) {
+      const mode = msg.substring(4);
+      setLedSelect(mode);
+      // Show LED control option when device sends LED state (device supports LED control)
+      const ledGroup = document.getElementById('ledSelectGroup');
+      if (ledGroup) ledGroup.style.display = '';
+      addLog(`时钟LED闪烁模式: ${mode}`);
+    } else if (msg.startsWith('show_device_id=') && msg.length > 15) {
+      const value = msg.substring(15);
+      setShowDeviceIdSelect(value);
+      // Show device ID option when device sends show_device_id state (device supports this feature)
+      const deviceIdGroup = document.getElementById('showDeviceIdGroup');
+      if (deviceIdGroup) deviceIdGroup.style.display = '';
+      addLog(`设备ID显示: ${value === '1' ? '显示' : '隐藏'}`);
+    } else if (msg.startsWith('firmware_version=') && msg.length > 17) {
+      firmwareVersion = parseInt(msg.substring(17));
+      // Update firmware version display with format: 0x18-01
+      const versionText = firmwareVersion != null ? `0x${appVersion.toString(16)}-${firmwareVersion.toString(16).padStart(2, '0').toUpperCase()}` : `0x${appVersion.toString(16)}`;
+      // Update the version log entry by replacing the previous version line
+      const logElement = document.getElementById("log");
+      if (logElement && logElement.value) {
+        const logValue = logElement.value;
+        const versionLineIndex = logValue.indexOf('固件版本:');
+        if (versionLineIndex !== -1) {
+          const beforeVersion = logValue.substring(0, versionLineIndex);
+          const afterVersion = logValue.substring(versionLineIndex);
+          const lineEnd = afterVersion.indexOf('\n');
+          const rest = lineEnd !== -1 ? afterVersion.substring(lineEnd + 1) : '';
+          logElement.value = beforeVersion + `固件版本: ${versionText}\n` + rest;
+        } else {
+          addLog(`固件版本: ${versionText}`);
+        }
+      }
     }
+  }
+}
+
+function setShowDeviceIdSelect(value) {
+  const select = document.getElementById('showDeviceIdSelect');
+  if (select) {
+    select.value = value;
+    select.dataset.prevValue = value;
+  }
+}
+
+function setLedSelect(value) {
+  const ledSelect = document.getElementById('ledSelect');
+  if (ledSelect) {
+    ledSelect.value = value;
+    ledSelect.dataset.prevValue = value;
+  }
+}
+
+async function updateClockLed(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "0";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.LED_CTRL, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+  }
+}
+
+async function updateShowDeviceId(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "1";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.SET_SHOW_DEVICE_ID, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+    addLog(`设备ID显示设置已更新: ${value === 1 ? '显示' : '隐藏'}`);
+    // Calendar refresh is handled automatically by the device after setting
   }
 }
 
@@ -582,6 +679,7 @@ async function connect() {
     const versionCharacteristic = await epdService.getCharacteristic('62750003-d828-918d-fb46-b6c11c675aec');
     const versionData = await versionCharacteristic.readValue();
     appVersion = versionData.getUint8(0);
+    // Firmware version will be updated when device sends firmware_version message
     addLog(`固件版本: 0x${appVersion.toString(16)}`);
   } catch (e) {
     console.error(e);
