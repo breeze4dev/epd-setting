@@ -29,6 +29,7 @@ const EpdCmd = {
   SET_ROTATION: 0x22,
   LED_CTRL:  0x23,
   SET_SHOW_DEVICE_ID: 0x24,
+  SET_BLE_MODE: 0x25,
 
   WRITE_IMG: 0x30, // v1.6
 
@@ -487,6 +488,8 @@ function updateButtonStatus(forceDisabled = false) {
   if (ledSelect) ledSelect.disabled = !!status;
   const showDeviceIdSelect = document.getElementById("showDeviceIdSelect");
   if (showDeviceIdSelect) showDeviceIdSelect.disabled = !!status;
+  const bleModeSelect = document.getElementById("bleModeSelect");
+  if (bleModeSelect) bleModeSelect.disabled = !!status;
 }
 
 function disconnect() {
@@ -497,6 +500,8 @@ function disconnect() {
   if (ledGroup) ledGroup.style.display = 'none';
   const deviceIdGroup = document.getElementById('showDeviceIdGroup');
   if (deviceIdGroup) deviceIdGroup.style.display = 'none';
+  const bleModeGroup = document.getElementById('bleModeGroup');
+  if (bleModeGroup) bleModeGroup.style.display = 'none';
   addLog('已断开连接.');
   document.getElementById("connectbutton").innerHTML = '连接';
 }
@@ -584,6 +589,19 @@ function handleNotify(value, idx) {
       const deviceIdGroup = document.getElementById('showDeviceIdGroup');
       if (deviceIdGroup) deviceIdGroup.style.display = '';
       addLog(`设备ID显示: ${value === '1' ? '显示' : '隐藏'}`);
+    } else if (msg.startsWith('ble_mode=') && msg.length > 8) {
+      const value = msg.substring(9);
+      setBleModeSelect(value);
+      // Show BLE mode option when device sends ble_mode state (device supports this feature)
+      const bleModeGroup = document.getElementById('bleModeGroup');
+      if (bleModeGroup) bleModeGroup.style.display = '';
+      const modeText = {
+        '0': '关闭蓝牙',
+        '1': '每小时开启5分钟',
+        '2': '每10分钟开启1分钟',
+        '3': '保持打开'
+      };
+      addLog(`蓝牙广播模式: ${modeText[value] || value}`);
     } else if (msg.startsWith('firmware_version=') && msg.length > 17) {
       firmwareVersion = parseInt(msg.substring(17));
       // Update firmware version display with format: 0x18-01
@@ -609,6 +627,14 @@ function handleNotify(value, idx) {
 
 function setShowDeviceIdSelect(value) {
   const select = document.getElementById('showDeviceIdSelect');
+  if (select) {
+    select.value = value;
+    select.dataset.prevValue = value;
+  }
+}
+
+function setBleModeSelect(value) {
+  const select = document.getElementById('bleModeSelect');
   if (select) {
     select.value = value;
     select.dataset.prevValue = value;
@@ -652,8 +678,29 @@ async function updateShowDeviceId(select) {
     select.value = previous;
   } else {
     select.dataset.prevValue = select.value;
-    addLog(`设备ID显示设置已更新: ${value === 1 ? '显示' : '隐藏'}`);
-    // Calendar refresh is handled automatically by the device after setting
+  }
+}
+
+async function updateBleMode(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "3";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.SET_BLE_MODE, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+    const modeText = {
+      0: '关闭蓝牙',
+      1: '每小时开启5分钟',
+      2: '每10分钟开启1分钟',
+      3: '保持打开'
+    };
+    addLog(`蓝牙广播模式设置已更新: ${modeText[value] || value}`);
   }
 }
 

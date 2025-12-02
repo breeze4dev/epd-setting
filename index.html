@@ -77,6 +77,15 @@
                         <option value="0">隐藏</option>
                     </select>
                 </div>
+                <div class="flex-group" id="bleModeGroup" style="display: none;">
+                    <label for="bleModeSelect">蓝牙广播模式:</label>
+                    <select id="bleModeSelect" onchange="updateBleMode(this)">
+                        <option value="3">保持打开</option>
+                        <option value="1">每小时开启5分钟</option>
+                        <option value="2">每10分钟开启1分钟</option>
+                        <option value="0">关闭蓝牙</option>
+                    </select>
+                </div>
                 <div class="flex-group right debug">
                     <input type="text" id="cmdTXT" value="">
                     <button id="sendcmdbutton" type="button" class="primary" onclick="sendcmd()">发送命令</button>
