@@ -30,6 +30,7 @@ const EpdCmd = {
   LED_CTRL:  0x23,
   SET_SHOW_DEVICE_ID: 0x24,
   SET_BLE_MODE: 0x25,
+  SET_CALENDAR_THEME: 0x26,
 
   WRITE_IMG: 0x30, // v1.6
 
@@ -490,6 +491,8 @@ function updateButtonStatus(forceDisabled = false) {
   if (showDeviceIdSelect) showDeviceIdSelect.disabled = !!status;
   const bleModeSelect = document.getElementById("bleModeSelect");
   if (bleModeSelect) bleModeSelect.disabled = !!status;
+  const calendarThemeSelect = document.getElementById("calendarThemeSelect");
+  if (calendarThemeSelect) calendarThemeSelect.disabled = !!status;
 }
 
 function disconnect() {
@@ -502,6 +505,8 @@ function disconnect() {
   if (deviceIdGroup) deviceIdGroup.style.display = 'none';
   const bleModeGroup = document.getElementById('bleModeGroup');
   if (bleModeGroup) bleModeGroup.style.display = 'none';
+  const calendarThemeGroup = document.getElementById('calendarThemeGroup');
+  if (calendarThemeGroup) calendarThemeGroup.style.display = 'none';
   addLog('已断开连接.');
   document.getElementById("connectbutton").innerHTML = '连接';
 }
@@ -602,6 +607,17 @@ function handleNotify(value, idx) {
         '3': '保持打开'
       };
       addLog(`蓝牙广播模式: ${modeText[value] || value}`);
+    } else if (msg.startsWith('calendar_theme=') && msg.length > 14) {
+      const value = msg.substring(15);
+      setCalendarThemeSelect(value);
+      // Show calendar theme option when device sends calendar_theme state (device supports this feature)
+      const calendarThemeGroup = document.getElementById('calendarThemeGroup');
+      if (calendarThemeGroup) calendarThemeGroup.style.display = '';
+      const themeText = {
+        '0': '主题1',
+        '1': '主题2'
+      };
+      addLog(`日历主题: ${themeText[value] || value}`);
     } else if (msg.startsWith('firmware_version=') && msg.length > 17) {
       firmwareVersion = parseInt(msg.substring(17));
       // Update firmware version display with format: 0x18-01
@@ -635,6 +651,14 @@ function setShowDeviceIdSelect(value) {
 
 function setBleModeSelect(value) {
   const select = document.getElementById('bleModeSelect');
+  if (select) {
+    select.value = value;
+    select.dataset.prevValue = value;
+  }
+}
+
+function setCalendarThemeSelect(value) {
+  const select = document.getElementById('calendarThemeSelect');
   if (select) {
     select.value = value;
     select.dataset.prevValue = value;
@@ -701,6 +725,27 @@ async function updateBleMode(select) {
       3: '保持打开'
     };
     addLog(`蓝牙广播模式设置已更新: ${modeText[value] || value}`);
+  }
+}
+
+async function updateCalendarTheme(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "0";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.SET_CALENDAR_THEME, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+    const themeText = {
+      0: '主题1',
+      1: '主题2'
+    };
+    addLog(`日历主题设置已更新: ${themeText[value] || value}`);
   }
 }
 

@@ -86,6 +86,13 @@
                         <option value="0">关闭蓝牙</option>
                     </select>
                 </div>
+                <div class="flex-group" id="calendarThemeGroup" style="display: none;">
+                    <label for="calendarThemeSelect">日历主题:</label>
+                    <select id="calendarThemeSelect" onchange="updateCalendarTheme(this)">
+                        <option value="0">主题1</option>
+                        <option value="1">主题2</option>
+                    </select>
+                </div>
                 <div class="flex-group right debug">
                     <input type="text" id="cmdTXT" value="">
                     <button id="sendcmdbutton" type="button" class="primary" onclick="sendcmd()">发送命令</button>
