@@ -93,6 +93,13 @@
                         <option value="1">主题2</option>
                     </select>
                 </div>
+                <div class="flex-group" id="clockThemeGroup" style="display: none;">
+                    <label for="clockThemeSelect">时钟主题:</label>
+                    <select id="clockThemeSelect" onchange="updateClockTheme(this)">
+                        <option value="0">主题1</option>
+                        <option value="1">主题2</option>
+                    </select>
+                </div>
                 <div class="flex-group right debug">
                     <input type="text" id="cmdTXT" value="">
                     <button id="sendcmdbutton" type="button" class="primary" onclick="sendcmd()">发送命令</button>

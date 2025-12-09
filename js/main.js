@@ -31,6 +31,7 @@ const EpdCmd = {
   SET_SHOW_DEVICE_ID: 0x24,
   SET_BLE_MODE: 0x25,
   SET_CALENDAR_THEME: 0x26,
+  SET_CLOCK_THEME: 0x27,
 
   WRITE_IMG: 0x30, // v1.6
 
@@ -507,6 +508,8 @@ function disconnect() {
   if (bleModeGroup) bleModeGroup.style.display = 'none';
   const calendarThemeGroup = document.getElementById('calendarThemeGroup');
   if (calendarThemeGroup) calendarThemeGroup.style.display = 'none';
+  const clockThemeGroup = document.getElementById('clockThemeGroup');
+  if (clockThemeGroup) clockThemeGroup.style.display = 'none';
   addLog('已断开连接.');
   document.getElementById("connectbutton").innerHTML = '连接';
 }
@@ -618,6 +621,17 @@ function handleNotify(value, idx) {
         '1': '主题2'
       };
       addLog(`日历主题: ${themeText[value] || value}`);
+    } else if (msg.startsWith('clock_theme=') && msg.length > 11) {
+      const value = msg.substring(12);
+      setClockThemeSelect(value);
+      // Show clock theme option when device sends clock_theme state (device supports this feature)
+      const clockThemeGroup = document.getElementById('clockThemeGroup');
+      if (clockThemeGroup) clockThemeGroup.style.display = '';
+      const themeText = {
+        '0': '主题1',
+        '1': '主题2'
+      };
+      addLog(`时钟主题: ${themeText[value] || value}`);
     } else if (msg.startsWith('firmware_version=') && msg.length > 17) {
       firmwareVersion = parseInt(msg.substring(17));
       // Update firmware version display with format: 0x18-01
@@ -659,6 +673,14 @@ function setBleModeSelect(value) {
 
 function setCalendarThemeSelect(value) {
   const select = document.getElementById('calendarThemeSelect');
+  if (select) {
+    select.value = value;
+    select.dataset.prevValue = value;
+  }
+}
+
+function setClockThemeSelect(value) {
+  const select = document.getElementById('clockThemeSelect');
   if (select) {
     select.value = value;
     select.dataset.prevValue = value;
@@ -746,6 +768,27 @@ async function updateCalendarTheme(select) {
       1: '主题2'
     };
     addLog(`日历主题设置已更新: ${themeText[value] || value}`);
+  }
+}
+
+async function updateClockTheme(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "0";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.SET_CLOCK_THEME, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+    const themeText = {
+      0: '主题1',
+      1: '主题2'
+    };
+    addLog(`时钟主题设置已更新: ${themeText[value] || value}`);
   }
 }
 
