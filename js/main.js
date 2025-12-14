@@ -196,7 +196,7 @@ async function syncCustomDate() {
 const canvasSizes = [
   // { name: '1.54_152_152', width: 152, height: 152 },
   // { name: '1.54_200_200', width: 200, height: 200 },
-  // { name: '2.13_212_104', width: 212, height: 104 },
+  { name: '2.13_212_104', width: 212, height: 104 },
   { name: '2.13_250_122', width: 250, height: 122 },
   // { name: '2.13_250_134', width: 250, height: 134 },
   // { name: '2.66_296_152', width: 296, height: 152 },
@@ -388,11 +388,18 @@ async function sendimg() {
 
   let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   
+  addLog(`发送图像: 画布尺寸=${canvas.width}x${canvas.height}, 颜色模式=${ditherMode}`);
+  
   // If canvas is landscape (width > height), it means user rotated the canvas clockwise
   // The device expects portrait orientation data, so we need to rotate counterclockwise
+  // Note: For 2.13 inch BW screens, canvas should already be rotated to 104x212 by autoRotateCanvasIfNeeded
+  // But if it's still 212x104, we need to rotate the image data
   if (canvas.width > canvas.height) {
+    addLog(`检测到横屏画布(${canvas.width}x${canvas.height})，旋转图像数据为竖屏方向`);
     imageData = rotateImageDataCounterclockwise(imageData);
-    addLog(`检测到横屏画布(${canvas.width}x${canvas.height})，已旋转图像数据为竖屏方向`);
+    addLog(`图像数据已旋转: ${imageData.width}x${imageData.height}`);
+  } else {
+    addLog(`画布已是竖屏方向(${canvas.width}x${canvas.height})，无需旋转`);
   }
   
   const processedData = processImageData(imageData, ditherMode);
@@ -559,7 +566,9 @@ function handleNotify(value, idx) {
     epdpins.value = bytes2hex(data.slice(0, 7));
     if (data.length > 10) epdpins.value += bytes2hex(data.slice(10, 11));
     epddriver.value = bytes2hex(data.slice(7, 8));
-    updateDitcherOptions();
+    // Don't call updateDitcherOptions here - wait for device= message
+    // updateDitcherOptions will be called by updateUIForDevice after device info is received
+    addLog(`配置已读取，等待设备信息...`);
   } else {
     if (textDecoder == null) textDecoder = new TextDecoder();
     const msg = textDecoder.decode(data);
@@ -929,13 +938,31 @@ function updateCanvasSize(sizeNameOverride) {
     return;
   }
   
-  // Use override value if provided, otherwise read from DOM
-  const selectedSizeName = sizeNameOverride || document.getElementById('canvasSize').value;
+  // Handle event object: if sizeNameOverride is an Event, get value from target
+  // Otherwise use the provided string value or read from DOM
+  let selectedSizeName;
+  if (sizeNameOverride && typeof sizeNameOverride === 'object' && sizeNameOverride.target) {
+    // It's an event object, get value from target
+    selectedSizeName = sizeNameOverride.target.value;
+  } else if (typeof sizeNameOverride === 'string') {
+    // It's a string value
+    selectedSizeName = sizeNameOverride;
+  } else {
+    // Read from DOM
+    selectedSizeName = document.getElementById('canvasSize').value;
+  }
+  
   console.log("updateCanvasSize: sizeNameOverride =", sizeNameOverride);
   console.log("updateCanvasSize: selectedSizeName =", selectedSizeName);
   console.log("updateCanvasSize: DOM value =", document.getElementById('canvasSize').value);
   console.log("updateCanvasSize: available canvasSizes =", canvasSizes.map(s => s.name));
   addLog(`更新画布尺寸: 选择的尺寸名称 = "${selectedSizeName}"`);
+  
+  // Ensure selectedSizeName is a string
+  if (typeof selectedSizeName !== 'string') {
+    addLog(`错误: 画布尺寸名称类型错误: ${typeof selectedSizeName}`);
+    return;
+  }
   
   if (!selectedSizeName || selectedSizeName.trim() === '') {
     addLog(`错误: 画布尺寸名称为空`);
@@ -1021,7 +1048,7 @@ function updateDitcherOptions() {
 }
 
 function updateUIForDevice() {
-  if (!deviceInfo.modelId || !deviceInfo.width || !deviceInfo.height) {
+  if (!deviceInfo.modelId) {
     return;
   }
   
@@ -1029,79 +1056,122 @@ function updateUIForDevice() {
   const epddriver = document.getElementById("epddriver");
   const modelIdHex = deviceInfo.modelId.toString(16).padStart(2, '0');
   
-  // Find matching option
+  addLog(`设备型号ID: 0x${modelIdHex}, 设备尺寸: ${deviceInfo.width}x${deviceInfo.height}`);
+  
+  // Find matching option and get its data-size BEFORE changing selection
+  // This prevents the change event from using wrong values
+  let driverFound = false;
+  let correctCanvasSize = null;
+  let correctColorMode = null;
+  let driverIndex = -1;
+  
   for (let i = 0; i < epddriver.options.length; i++) {
     if (epddriver.options[i].value === modelIdHex) {
-      epddriver.selectedIndex = i;
-      addLog(`自动选择驱动: ${epddriver.options[i].text}`);
+      driverIndex = i;
+      const option = epddriver.options[i];
+      correctCanvasSize = option.getAttribute('data-size');
+      correctColorMode = option.getAttribute('data-color');
+      addLog(`找到匹配驱动: ${option.text}, 画布尺寸=${correctCanvasSize}, 颜色模式=${correctColorMode}`);
+      driverFound = true;
       break;
     }
   }
   
-  // Update canvas size based on device dimensions
-  const canvasSize = document.getElementById("canvasSize");
-  
-  // Try both orientations: width_height and height_width
-  const sizeString1 = `${deviceInfo.width}_${deviceInfo.height}`;
-  const sizeString2 = `${deviceInfo.height}_${deviceInfo.width}`;
-  
-  // First try to find exact match (check both orientations)
-  let foundMatch = false;
-  for (let i = 0; i < canvasSize.options.length; i++) {
-    const optionValue = canvasSize.options[i].value;
-    // Check if option contains either orientation
-    if (optionValue.includes(sizeString1) || optionValue.includes(sizeString2)) {
-      canvasSize.selectedIndex = i;
-      addLog(`自动选择画布尺寸: ${canvasSize.options[i].text}`);
-      foundMatch = true;
-      break;
+  // If driver found, ALWAYS use its data-size attribute to set canvas size
+  // This ensures consistency between driver and canvas size, regardless of device-reported dimensions
+  if (driverFound) {
+    // Temporarily remove change event listener to prevent it from interfering
+    const changeHandler = updateDitcherOptions;
+    epddriver.removeEventListener("change", changeHandler);
+    
+    // Set driver selection
+    epddriver.selectedIndex = driverIndex;
+    addLog(`自动选择驱动: ${epddriver.options[driverIndex].text}`);
+    
+    // Set UI elements with the correct values we found earlier
+    if (correctColorMode) {
+      document.getElementById('ditherMode').value = correctColorMode;
     }
-  }
-  
-  // If no exact match found, try to find closest match based on device dimensions
-  if (!foundMatch) {
-    addLog(`设备尺寸 ${deviceInfo.width}x${deviceInfo.height} 未找到精确匹配，尝试选择最接近的尺寸`);
+    if (correctCanvasSize) {
+      const canvasSizeElement = document.getElementById('canvasSize');
+      // Temporarily remove change event listener to prevent interference
+      const canvasSizeChangeHandler = updateCanvasSize;
+      canvasSizeElement.removeEventListener("change", canvasSizeChangeHandler);
+      
+      canvasSizeElement.value = correctCanvasSize;
+      addLog(`自动选择画布尺寸: ${correctCanvasSize} (来自驱动配置)`);
+      
+      // Immediately update canvas size (same logic as updateDitcherOptions)
+      if (canvas) {
+        updateCanvasSize(correctCanvasSize); // Pass string directly, not event
+        autoRotateCanvasIfNeeded(correctCanvasSize);
+      }
+      
+      // Re-add the event listener
+      canvasSizeElement.addEventListener("change", canvasSizeChangeHandler);
+    }
     
-    // Find the closest available size (check both orientations)
-    let closestIndex = 0;
-    let minDifference = Infinity;
+    // Re-add the event listener
+    epddriver.addEventListener("change", changeHandler);
     
-    for (let i = 0; i < canvasSize.options.length; i++) {
-      const optionValue = canvasSize.options[i].value;
-      // Extract dimensions from option value (format: "size_width_height")
-      const parts = optionValue.split('_');
-      if (parts.length >= 3) {
-        const optionWidth = parseInt(parts[1]);
-        const optionHeight = parseInt(parts[2]);
-        
-        // Calculate difference for both orientations
-        const diff1 = Math.abs(optionWidth - deviceInfo.width) + Math.abs(optionHeight - deviceInfo.height);
-        const diff2 = Math.abs(optionWidth - deviceInfo.height) + Math.abs(optionHeight - deviceInfo.width);
-        const difference = Math.min(diff1, diff2);
-        
-        if (difference < minDifference) {
-          minDifference = difference;
-          closestIndex = i;
+    // Ensure all UI elements are synchronized (but don't trigger canvas update again)
+    // The canvas has already been updated above
+  } else {
+    // If driver not found, try to match canvas size based on device dimensions
+    addLog(`警告: 未找到匹配的驱动 (model_id=0x${modelIdHex})，尝试根据设备尺寸匹配画布`);
+    if (deviceInfo.width && deviceInfo.height) {
+      const canvasSize = document.getElementById("canvasSize");
+      
+      // Try both orientations: width_height and height_width
+      const sizeString1 = `${deviceInfo.width}_${deviceInfo.height}`;
+      const sizeString2 = `${deviceInfo.height}_${deviceInfo.width}`;
+      
+      addLog(`尝试匹配尺寸: ${sizeString1} 或 ${sizeString2}`);
+      
+      // First try to find exact match (check both orientations)
+      let foundMatch = false;
+      for (let i = 0; i < canvasSize.options.length; i++) {
+        const optionValue = canvasSize.options[i].value;
+        // Check if option contains either orientation
+        if (optionValue.includes(sizeString1) || optionValue.includes(sizeString2)) {
+          canvasSize.selectedIndex = i;
+          addLog(`自动选择画布尺寸: ${canvasSize.options[i].text} (精确匹配)`);
+          foundMatch = true;
+          break;
         }
       }
-    }
-    
-    canvasSize.selectedIndex = closestIndex;
-    addLog(`选择最接近的画布尺寸: ${canvasSize.options[closestIndex].text}`);
-  }
-  
-  // Update dither options based on selected driver
-  // Only call if canvas is initialized
-  if (canvas) {
-    updateDitcherOptions();
-  } else {
-    // If canvas not ready, just update the UI elements without canvas operations
-    const epdDriverSelect = document.getElementById('epddriver');
-    const selectedOption = epdDriverSelect.options[epdDriverSelect.selectedIndex];
-    const colorMode = selectedOption.getAttribute('data-color');
-    
-    if (colorMode) {
-      document.getElementById('ditherMode').value = colorMode;
+      
+      // If no exact match found, try to find closest match based on device dimensions
+      if (!foundMatch) {
+        addLog(`设备尺寸 ${deviceInfo.width}x${deviceInfo.height} 未找到精确匹配，尝试选择最接近的尺寸`);
+        
+        // Find the closest available size (check both orientations)
+        let closestIndex = 0;
+        let minDifference = Infinity;
+        
+        for (let i = 0; i < canvasSize.options.length; i++) {
+          const optionValue = canvasSize.options[i].value;
+          // Extract dimensions from option value (format: "size_width_height")
+          const parts = optionValue.split('_');
+          if (parts.length >= 3) {
+            const optionWidth = parseInt(parts[1]);
+            const optionHeight = parseInt(parts[2]);
+            
+            // Calculate difference for both orientations
+            const diff1 = Math.abs(optionWidth - deviceInfo.width) + Math.abs(optionHeight - deviceInfo.height);
+            const diff2 = Math.abs(optionWidth - deviceInfo.height) + Math.abs(optionHeight - deviceInfo.width);
+            const difference = Math.min(diff1, diff2);
+            
+            if (difference < minDifference) {
+              minDifference = difference;
+              closestIndex = i;
+            }
+          }
+        }
+        
+        canvasSize.selectedIndex = closestIndex;
+        addLog(`选择最接近的画布尺寸: ${canvasSize.options[closestIndex].text} (差异=${minDifference})`);
+      }
     }
   }
   
@@ -1227,8 +1297,11 @@ function autoRotateCanvasIfNeeded(sizeName) {
   }
   
   // Check if this is a landscape screen that needs rotation
+  // Note: 2.13_212_104 is displayed as landscape (212x104) but device expects portrait (104x212) data
+  // So we need to rotate it to portrait orientation
   const needsRotation = sizeName.includes('2.13_250_122') || 
                        sizeName.includes('2.13_250_134') || 
+                       sizeName.includes('2.13_212_104') ||  // 2.13 inch BW screen needs rotation
                        sizeName.includes('2.9_296_128') || 
                        sizeName.includes('2.66_296_152');
   
@@ -1236,8 +1309,11 @@ function autoRotateCanvasIfNeeded(sizeName) {
     const currentWidth = canvas.width;
     const currentHeight = canvas.height;
     
+    addLog(`autoRotateCanvasIfNeeded: 尺寸=${sizeName}, 当前画布=${currentWidth}x${currentHeight}`);
+    
     // Only rotate if current orientation is landscape (width > height)
     if (currentWidth > currentHeight) {
+      addLog(`检测到横屏画布，开始旋转为竖屏`);
       // Check if canvas has content (not just white)
       const imageData = ctx.getImageData(0, 0, currentWidth, currentHeight);
       const hasContent = imageData.data.some((value, index) => {
@@ -1303,6 +1379,7 @@ function autoRotateCanvasIfNeeded(sizeName) {
         redrawLineSegments();
       } else {
         // If canvas is empty, just swap dimensions
+        addLog(`画布为空，直接交换尺寸`);
         canvas.width = currentHeight;
         canvas.height = currentWidth;
       }
