@@ -32,6 +32,7 @@ const EpdCmd = {
   SET_BLE_MODE: 0x25,
   SET_CALENDAR_THEME: 0x26,
   SET_CLOCK_THEME: 0x27,
+  SET_TEMPERATURE_OFFSET: 0x28,
 
   WRITE_IMG: 0x30, // v1.6
 
@@ -641,6 +642,16 @@ function handleNotify(value, idx) {
         '1': '主题2'
       };
       addLog(`时钟主题: ${themeText[value] || value}`);
+    } else if (msg.startsWith('temperature_offset=') && msg.length > 19) {
+      // Parse signed integer (can be negative)
+      const valueStr = msg.substring(19);
+      const value = parseInt(valueStr);
+      updateTemperatureOffsetDisplay(value);
+      // Show temperature calibration option when device sends temperature_offset state
+      const temperatureCalibrationGroup = document.getElementById('temperatureCalibrationGroup');
+      if (temperatureCalibrationGroup) temperatureCalibrationGroup.style.display = '';
+      const offsetText = value > 0 ? `+${value}` : `${value}`;
+      addLog(`温度校准偏移量: ${offsetText}℃`);
     } else if (msg.startsWith('firmware_version=') && msg.length > 17) {
       firmwareVersion = parseInt(msg.substring(17));
       // Update firmware version display with format: 0x18-01
@@ -798,6 +809,52 @@ async function updateClockTheme(select) {
       1: '主题2'
     };
     addLog(`时钟主题设置已更新: ${themeText[value] || value}`);
+  }
+}
+
+// Temperature calibration offset (stored as signed 8-bit: -128 to 127)
+let currentTemperatureOffset = 0;
+
+function updateTemperatureOffsetDisplay(offset) {
+  currentTemperatureOffset = offset;
+  const display = document.getElementById('temperatureOffsetDisplay');
+  if (display) {
+    const offsetText = offset > 0 ? `偏移量: +${offset}℃` : `偏移量: ${offset}℃`;
+    display.textContent = offsetText;
+  }
+}
+
+async function adjustTemperatureOffset(delta) {
+  if (!checkBluetoothConnection()) {
+    addLog('请先连接蓝牙设备');
+    return;
+  }
+  
+  // Calculate new offset value
+  let newOffset = currentTemperatureOffset + delta;
+  
+  // Clamp to signed 8-bit range (-128 to 127)
+  if (newOffset > 127) {
+    newOffset = 127;
+    addLog('温度偏移量已达到最大值 (127℃)');
+    return;
+  }
+  if (newOffset < -128) {
+    newOffset = -128;
+    addLog('温度偏移量已达到最小值 (-128℃)');
+    return;
+  }
+  
+  // Convert to unsigned 8-bit for transmission (signed values are sent as two's complement)
+  const offsetByte = newOffset < 0 ? (256 + newOffset) : newOffset;
+  
+  const success = await write(EpdCmd.SET_TEMPERATURE_OFFSET, [offsetByte]);
+  if (success) {
+    updateTemperatureOffsetDisplay(newOffset);
+    const offsetText = newOffset > 0 ? `+${newOffset}` : `${newOffset}`;
+    addLog(`温度校准偏移量已更新: ${offsetText}℃`);
+  } else {
+    addLog('温度校准偏移量设置失败');
   }
 }
 
