@@ -1,0 +1,4045 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>墨水屏日历</title>
+	<link rel="shortcut icon" type="image/png" href="favicon.png">
+	<style>
+:root {
+    --primary-color: #0d6efd;
+    --primary-hover: #0b5ed7;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5c636a;
+
+    --dark-bg: #121212;
+    --dark-text: #e0e0e0;
+    --dark-fieldset-bg: #1e1e1e;
+    --dark-border: #333;
+    --dark-code-bg: #2d2d2d;
+    --dark-log-bg: #2a2a2a;
+    --dark-input-bg: #2d2d2d;
+    --dark-input-text: #e0e0e0;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.debug {
+    display: none !important;
+}
+
+body.debug-mode .debug {
+    display: flex !important;
+}
+
+body.debug-mode {
+    background-color: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+body.debug-mode .main {
+    background-color: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+body.debug-mode fieldset {
+    background-color: var(--dark-fieldset-bg);
+    box-shadow: 0 .5rem 0.5rem rgba(0, 0, 0, 0.5);
+}
+
+body.debug-mode h3 {
+    border-bottom: 1px solid var(--dark-border);
+    color: var(--dark-text);
+}
+
+body.debug-mode code {
+    background: var(--dark-code-bg);
+    color: #ff9800;
+}
+
+body.debug-mode #log {
+    background: var(--dark-log-bg);
+    border: 1px solid var(--dark-border);
+}
+
+body.debug-mode #log .time {
+    color: #8bc34a;
+}
+
+body.debug-mode #log .action {
+    color: #03a9f4;
+}
+
+body.debug-mode input[type=text],
+body.debug-mode input[type=number],
+body.debug-mode select {
+    background-color: var(--dark-input-bg);
+    color: var(--dark-input-text);
+    border-color: var(--dark-border);
+}
+
+body.debug-mode input[type=file] {
+    color: var(--dark-input-text);
+    background-color: transparent;
+    border-color: var(--dark-border);
+}
+
+body.debug-mode input[type=file]::file-selector-button {
+    background-color: var(--dark-fieldset-bg);
+    color: var(--dark-input-text);
+    border-color: var(--dark-border);
+}
+
+body.debug-mode input[type=file]::file-selector-button:hover {
+    background-color: #333;
+    border-color: #444;
+}
+
+body.debug-mode fieldset legend {
+    color: #64b5f6;
+}
+
+.main {
+    width: 100%;
+    max-width: 950px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    background: #fff;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    box-sizing: border-box;
+}
+
+.footer {
+    display: flex;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: #666;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+}
+
+.footer .links {
+    display: flex;
+    align-items: center;
+}
+
+.footer .links a {
+    color: #666;
+    text-decoration: none;
+    position: relative;
+    padding: 0 8px;
+}
+
+.footer .links a:first-child {
+    padding-left: 0;
+}
+
+.footer .links a:not(:last-child)::after {
+    content: "•";
+    position: absolute;
+    right: -4px;
+    color: #999;
+}
+
+.footer a:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+}
+
+body.debug-mode .footer .links a:not(:last-child)::after {
+    color: #666;
+}
+
+body.debug-mode .footer {
+    color: #999;
+}
+
+body.debug-mode .footer a {
+    color: #999;
+}
+
+body.debug-mode .footer a:hover {
+    color: #64b5f6;
+}
+
+h3 {
+    padding-bottom: .3em;
+    border-bottom: 1px solid #CCC;
+    text-align: center;
+}
+
+.info-notice {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 16px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.info-notice:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.info-icon {
+    font-size: 1.2rem;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.info-content {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.info-text {
+    color: #1976d2;
+    font-weight: 500;
+}
+
+.info-link {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 4px 8px;
+    background: rgba(13, 110, 253, 0.1);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.info-link:hover {
+    background: rgba(13, 110, 253, 0.2);
+    border-color: rgba(13, 110, 253, 0.3);
+    transform: scale(1.05);
+    text-decoration: none;
+}
+
+body.debug-mode .info-notice {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d1b3d 100%);
+    border-color: #3a4a6b;
+}
+
+body.debug-mode .info-text {
+    color: #64b5f6;
+}
+
+body.debug-mode .info-link {
+    color: #64b5f6;
+    background: rgba(100, 181, 246, 0.1);
+}
+
+body.debug-mode .info-link:hover {
+    background: rgba(100, 181, 246, 0.2);
+    border-color: rgba(100, 181, 246, 0.3);
+}
+
+fieldset {
+    border: none;
+    box-shadow: 0 .5rem 0.5rem rgba(0, 0, 0, 0.2);
+    background-color: #f8f9fa;
+    padding: 10px;
+    margin-bottom: 16px;
+    border-radius: 4px;
+}
+
+fieldset legend {
+    font-weight: bold;
+    color: rgba(0, 0, 255, 0.6);
+}
+
+code {
+    padding: .2em .4em;
+    margin: 0;
+    font-size: 85%;
+    background: #CCC;
+    border-radius: 3px;
+}
+
+.flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.flex-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.flex-group.right {
+    margin-left: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+#status {
+    margin: 10px 0;
+}
+
+#log {
+    width: 100%;
+    min-height: 100px;
+    max-height: 300px;
+    margin: 0;
+    padding: 5px;
+    background: #DDD;
+    overflow-y: auto;
+    overflow-x: hidden;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    box-sizing: border-box;
+    word-break: break-word;
+}
+
+#log div {
+    padding: 2px 0;
+}
+
+#log .time,
+#log .action {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+#log .time {
+    color: #333;
+    margin-right: 0.5em;
+}
+
+#log .action {
+    color: #666;
+    margin-right: 0.5em;
+}
+
+#canvas-box {
+    margin-top: 10px;
+    width: 100%;
+}
+
+#canvas {
+    border: black solid 1px;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.canvas-container.crop-mode #canvas {
+    border: 2px dashed var(--primary-color);
+    cursor: grab;
+}
+
+button {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--primary-color);
+    border-radius: 0.375rem;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+button:disabled {
+    opacity: 0.65;
+}
+
+button.primary {
+    color: #fff;
+    background-color: var(--primary-color);
+}
+
+button.primary:hover {
+    color: #fff;
+    border-color: var(--primary-hover);
+    background-color: var(--primary-hover);
+}
+
+button.secondary {
+    color: #fff;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+button.secondary:hover {
+    color: #fff;
+    border-color: var(--secondary-hover);
+    background-color: var(--secondary-hover);
+}
+
+input[type=text],
+input[type=number],
+select {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: .2rem .75rem;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+input[type=file] {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    max-width: 100%;
+}
+
+input::file-selector-button {
+    font-size: 0.9rem;
+    font-weight: 400;
+    line-height: 1.5;
+    border: 1px solid var(--primary-color);
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+select {
+    padding: .3rem 2.25rem .3rem .75rem;
+}
+
+input:focus,
+select:focus {
+    border: 1px solid #86b7fe;
+    box-shadow: 0 0 4px rgba(0, 120, 215, 0.8);
+    outline: 0;
+}
+
+label {
+    margin-right: 4px;
+    white-space: nowrap;
+}
+
+.status-bar {
+    display: none;
+    font-size: 85%;
+    color: #666;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dotted #AAA;
+}
+
+canvas.text-placement-mode {
+    border: 2px dashed var(--primary-color) !important;
+    cursor: text !important; /* Force text cursor */
+}
+
+.canvas-title {
+    display: none;
+    text-align: center;
+    margin-bottom: 5px;
+    color: var(--primary-color);
+}
+
+.canvas-tools {
+    margin-top: 10px;
+    justify-content: center;
+}
+
+.brush-tools,
+.text-tools,
+.crop-tools {
+    display: none;
+}
+
+.canvas-container.brush-mode .brush-tools,
+.canvas-container.text-mode .brush-tools,
+.canvas-container.eraser-mode .brush-tools,
+.canvas-container.text-mode .text-tools,
+.canvas-container.crop-mode .crop-tools {
+    display: flex;
+}
+
+.canvas-container.crop-mode .tool-buttons,
+.canvas-container.crop-mode .brush-tools,
+.canvas-container.crop-mode .text-tools {
+    display: none;
+}
+
+.tool-button {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 5px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tool-button:hover {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+}
+
+.tool-button.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+body.debug-mode .tool-button {
+    background-color: var(--dark-input-bg);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+body.debug-mode .tool-button:hover {
+    background-color: #3a3a3a;
+    border-color: #444;
+}
+
+body.debug-mode .tool-button.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-hover);
+}
+
+input[type=text]:disabled,
+input[type=number]:disabled,
+select:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+body.debug-mode input[type=text]:disabled,
+body.debug-mode input[type=number]:disabled,
+body.debug-mode select:disabled {
+    background-color: #1a1a1a;
+    color: #666;
+    border-color: #2a2a2a;
+}
+
+@media (max-width: 768px) {
+    .flex-container {
+        flex-direction: column;
+    }
+    .flex-container.options .flex-group label {
+        min-width: 80px;
+    }
+
+    .flex-group.right {
+        margin-left: 0;
+    }
+
+    .canvas-tools.flex-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .canvas-tools .flex-group {
+        justify-content: center;
+        width: 100%;
+    }
+
+    #log {
+        height: 150px;
+        margin-top: 10px;
+    }
+
+    fieldset {
+        padding: 8px;
+    }
+
+    button {
+        width: auto;
+    }
+
+    input[type=text],
+    input[type=number],
+    select {
+        max-width: 100%;
+        margin-bottom: 5px;
+    }
+}
+
+/* Debug Calendar Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.close {
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #999;
+    line-height: 1;
+}
+
+.close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.calendar-container {
+    text-align: center;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.calendar-header button {
+    background: none;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 16px;
+    color: #333;
+}
+
+.calendar-header button:hover {
+    background-color: #f8f9fa;
+}
+
+#currentMonthYear {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.calendar-grid {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.calendar-weekdays div {
+    padding: 8px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: #666;
+    text-align: center;
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.calendar-day {
+    padding: 12px 8px;
+    cursor: pointer;
+    border-right: 1px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
+    font-size: 0.9rem;
+    color: #333;
+    transition: background-color 0.2s;
+}
+
+.calendar-day:nth-child(7n) {
+    border-right: none;
+}
+
+.calendar-day:hover {
+    background-color: #f8f9fa;
+}
+
+.calendar-day.other-month {
+    color: #ccc;
+}
+
+.calendar-day.today {
+    background-color: #e3f2fd;
+    font-weight: bold;
+}
+
+.calendar-day.selected {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.calendar-day.selected:hover {
+    background-color: var(--primary-hover);
+}
+
+.calendar-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* Dark mode styles for debug calendar */
+body.debug-mode .modal-content {
+    background-color: var(--dark-fieldset-bg);
+    color: var(--dark-text);
+}
+
+body.debug-mode .modal-header {
+    border-bottom-color: var(--dark-border);
+}
+
+body.debug-mode .modal-header h3 {
+    color: var(--dark-text);
+}
+
+body.debug-mode .close {
+    color: #999;
+}
+
+body.debug-mode .close:hover {
+    color: var(--dark-text);
+}
+
+body.debug-mode .calendar-header button {
+    background-color: var(--dark-input-bg);
+    color: var(--dark-input-text);
+    border-color: var(--dark-border);
+}
+
+body.debug-mode .calendar-header button:hover {
+    background-color: #333;
+}
+
+body.debug-mode #currentMonthYear {
+    color: var(--dark-text);
+}
+
+body.debug-mode .calendar-grid {
+    border-color: var(--dark-border);
+}
+
+body.debug-mode .calendar-weekdays {
+    background-color: var(--dark-code-bg);
+    border-bottom-color: var(--dark-border);
+}
+
+body.debug-mode .calendar-weekdays div {
+    color: #999;
+}
+
+body.debug-mode .calendar-day {
+    color: var(--dark-text);
+    border-right-color: var(--dark-border);
+    border-bottom-color: var(--dark-border);
+}
+
+body.debug-mode .calendar-day:hover {
+    background-color: #333;
+}
+
+body.debug-mode .calendar-day.other-month {
+    color: #666;
+}
+
+body.debug-mode .calendar-day.today {
+    background-color: #2d4a6b;
+}
+
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .calendar-day {
+        padding: 8px 4px;
+        font-size: 0.8rem;
+    }
+}
+</style>
+</head>
+
+<body>
+    <div class="main">
+        <h3>墨水屏日历设置</h3>
+		<div class="info-notice">
+			<div class="info-content">
+				<span class="info-text">注意：本工具仅限部分2.13寸和2.9寸阿里价签使用, 其他尺寸价签设置请访问原作者项目</span>
+				<a href="https://github.com/tsl0922/EPD-nRF5" class="info-link" target="_blank">Github</a>
+				<br>
+				<span class="info-text">使用方法: </span>
+				<a href="https://breeze4dev.github.io/epd-setting" class="info-link" target="_blank">https://breeze4dev.github.io/epd-setting</a>
+			</div>
+		</div>
+		<h4></h4>
+        <fieldset>
+            <legend>蓝牙连接</legend>
+            <div class="flex-container">
+                <div class="flex-group">
+                    <button id="connectbutton" type="button" class="primary" onclick="preConnect()">连接</button>
+                    <button id="reconnectbutton" type="button" class="secondary" onclick="reConnect()">重连</button>
+					<button type="button" class="secondary" onclick="clearLog()">清空日志</button>
+                </div>
+				<div class="flex-group debug">
+					<label for="epddriver">驱动</label>
+					<select id="epddriver">
+						<option value="06" data-color="threeColor" data-size="2.13_250_122">SSD1619/SSD1683(2.13寸三色)</option>
+						<option value="08" data-color="threeColor" data-size="2.13_250_122" selected>SSD1619/SSD1683(2.13寸三色CE)</option>
+						<option value="07" data-color="threeColor" data-size="2.9_296_128">SSD1619/SSD1683(2.9寸三色)</option>
+						<option value="09" data-color="threeColor" data-size="2.9_296_128">SSD1619/SSD1683(2.9寸三色CE)</option>
+						<!-- <option value="01" data-color="blackWhiteColor" data-size="4.2_400_300">UC8176/UC8276(黑白)</option>
+						<option value="03" data-color="threeColor" data-size="4.2_400_300">UC8176/UC8276(三色)</option>
+						<option value="04" data-color="blackWhiteColor" data-size="4.2_400_300">SSD1619/SSD1683(黑白)</option>
+						<option value="02" data-color="threeColor" data-size="4.2_400_300">SSD1619/SSD1683(4.2寸三色)</option>
+						<option value="05" data-color="fourColor" data-size="4.2_400_300">JD79668(四色)</option> -->
+					</select>
+					<label for="epdpins">引脚</label>
+					<input id="epdpins" type="text" value="">
+					<button id="setDriverbutton" type="button" class="primary" onclick="setDriver()">确认</button>
+				</div>
+            </div>
+			<div id="log"></div>
+        </fieldset>
+		<fieldset>
+            <legend>设备控制</legend>
+            <div class="flex-container">
+				<div class="flex-group">
+                    <button id="calendarmodebutton" type="button" class="primary" onclick="syncTime(1)">日历模式</button>
+                    <button id="clockmodebutton" type="button" class="primary" onclick="syncTime(2)">时钟模式</button>
+					<button id="clearscreenbutton" type="button" class="secondary" onclick="clearScreen()">清除屏幕</button>
+					<button id="debugcalendarbutton" type="button" class="secondary" onclick="showDebugCalendar()">选择日期</button>
+                </div>
+                <div class="flex-group debug" id="ledSelectGroup" style="display: none;">
+                    <label for="ledSelect">时钟LED闪烁:</label>
+                    <select id="ledSelect" onchange="updateClockLed(this)">
+                        <option value="0">不闪烁</option>
+                        <option value="1">每分钟闪烁</option>
+                        <option value="2">每5分钟闪烁</option>
+                        <option value="3">每10分钟闪烁</option>
+                        <option value="4">每15分钟闪烁</option>
+                        <option value="5">每30分钟闪烁</option>
+                        <option value="6">每小时闪烁</option>
+                    </select>
+                </div>
+                <div class="flex-group" id="showDeviceIdGroup" style="display: none;">
+                    <label for="showDeviceIdSelect">日历设备ID:</label>
+                    <select id="showDeviceIdSelect" onchange="updateShowDeviceId(this)">
+                        <option value="1">显示</option>
+                        <option value="0">隐藏</option>
+                    </select>
+                </div>
+                <div class="flex-group" id="bleModeGroup" style="display: none;">
+                    <label for="bleModeSelect">蓝牙广播模式:</label>
+                    <select id="bleModeSelect" onchange="updateBleMode(this)">
+                        <option value="3">保持打开</option>
+                        <option value="1">每小时开启5分钟</option>
+                        <option value="2">每10分钟开启1分钟</option>
+                        <option value="0">关闭蓝牙</option>
+                    </select>
+                </div>
+                <div class="flex-group" id="calendarThemeGroup" style="display: none;">
+                    <label for="calendarThemeSelect">日历主题:</label>
+                    <select id="calendarThemeSelect" onchange="updateCalendarTheme(this)">
+                        <option value="0">主题1</option>
+                        <option value="1">主题2</option>
+                    </select>
+                </div>
+                <div class="flex-group" id="clockThemeGroup" style="display: none;">
+                    <label for="clockThemeSelect">时钟主题:</label>
+                    <select id="clockThemeSelect" onchange="updateClockTheme(this)">
+                        <option value="0">主题1</option>
+                        <option value="1">主题2</option>
+                    </select>
+                </div>
+                <div class="flex-group" id="temperatureCalibrationGroup" style="display: none;">
+                    <label>温度校准:</label>
+                    <span id="temperatureOffsetDisplay">偏移量: 0℃</span>
+                    <button type="button" class="secondary" onclick="adjustTemperatureOffset(-1)">降低1℃</button>
+                    <button type="button" class="secondary" onclick="adjustTemperatureOffset(1)">升高1℃</button>
+                </div>
+                <div class="flex-group right debug">
+                    <input type="text" id="cmdTXT" value="">
+                    <button id="sendcmdbutton" type="button" class="primary" onclick="sendcmd()">发送命令</button>
+                </div>
+				<!-- <div class="flex-group">
+					<label for="rotationSelect">屏幕方向:</label>
+					<select id="rotationSelect" onchange="setRotation(parseInt(this.value))">
+						<option value="0">0° (正常)</option>
+						<option value="1">90° (顺时针)</option>
+						<option value="2">180° (倒置)</option>
+						<option value="3">270° (逆时针)</option>
+					</select>
+				</div> -->
+			</div>
+		</fieldset>
+		<fieldset>
+        	<legend>蓝牙传图</legend>
+			<div class="flex-container">
+				<input type="file" id="imageFile" accept=".png,.jpg,.bmp,.webp,.jpeg">
+			</div>
+			<div class="flex-container options">
+				<div class="flex-group debug">
+					<label for="canvasSize">画布尺寸:</label>
+					<select id="canvasSize">
+						<!-- <option value="1.54_152_152">1.54 (152x152)</option> -->
+						<!-- <option value="1.54_200_200">1.54 (200x200)</option> -->
+						<!-- <option value="2.13_212_104">2.13 (212x104)</option> -->
+						<option value="2.13_250_122">2.13 (250x122)</option>
+						<!-- <option value="2.66_296_152">2.66 (296x152)</option> -->
+						<option value="2.9_296_128" selected>2.9 (296x128)</option>
+						<!-- <option value="2.9_384_168">2.9 (384x168)</option> -->
+						<!-- <option value="3.5_384_184">3.5 (384x184)</option>
+						<option value="3.7_416_240">3.7 (416x240)</option>
+						<option value="3.97_800_480">3.97 (800x480)</option>
+						<option value="4.2_400_300">4.2 (400x300)</option>
+						<option value="5.79_792_272">5.79 (792x272)</option>
+						<option value="5.83_600_448">5.83 (600x448)</option>
+						<option value="5.83_648_480">5.83 (648x480)</option>
+						<option value="7.5_640_384">7.5 (640x384)</option>
+						<option value="7.5_800_480">7.5 (800x480)</option>
+						<option value="7.5_880_528">7.5 (880x528)</option>
+						<option value="10.2_960_640">10.2 (960x640)</option>
+						<option value="10.85_1360_480">10.85 (1360x480)</option>
+						<option value="11.6_960_640">11.6 (960x640)</option>
+						<option value="4E_600_400">4E (600x400)</option>
+						<option value="7.3E6">7.3E6 (480x800)</option> -->
+					</select>
+				</div>
+				<div class="flex-group debug">
+					<label for="ditherMode">颜色模式:</label>
+					<select id="ditherMode">
+						<option value="blackWhiteColor">双色(黑白)</option>
+						<option value="threeColor">三色(黑白红)</option>
+						<!-- <option value="fourColor">四色(黑白红黄)</option> -->
+						<!-- <option value="sixColor">六色(黑白红黄蓝绿)</option> -->
+					</select>
+				</div>
+				<div class="flex-group">
+					<label for="ditherAlg">抖动算法:</label>
+					<select id="ditherAlg">
+						<option value="floydSteinberg">Floyd-Steinberg</option>
+						<option value="atkinson">Atkinson</option>
+						<option value="bayer">Bayer</option>
+						<option value="stucki">Stucki</option>
+						<option value="jarvis">Jarvis-Judice-Ninke</option>
+					</select>
+				</div>
+				<div class="flex-group">
+					<label for="ditherStrength">抖动强度:</label>
+					<input type="range" min="0" max="5" step="0.1" value="1.0" id="ditherStrength">
+					<label id="ditherStrengthValue">1.0</label>
+				</div>
+				<div class="flex-group">
+					<label for="ditherContrast">对比度:</label>
+					<input type="range" min="0.5" max="2" step="0.1" value="1.2" id="ditherContrast">
+					<label id="ditherContrastValue">1.2</label>
+				</div>
+			</div>
+			<div class="flex-container options">
+				<div class="flex-group debug">
+					<label for="mtusize">MTU:</label>
+					<input type="number" id="mtusize" value="20" min="0" max="255">
+					<label for="interleavedcount">确认间隔:</label>
+					<input type="number" id="interleavedcount" value="50" min="0" max="500">
+				</div>
+			</div>
+			<div class="status-bar"><b>状态：</b><span id="status"></span></div>
+			<div class="flex-container">
+				<div class="flex-group">
+					<button type="button" class="secondary" onclick="rotateCanvas()">旋转画布</button>
+					<button type="button" class="secondary" onclick="clearCanvas()">清除画布</button>
+					<button type="button" class="secondary" onclick="downloadDataArray()">下载数组</button>
+					<button id="sendimgbutton" type="button" class="primary" onclick="sendimg()">发送图片</button>
+				</div>
+			</div>
+			<div class="canvas-container">
+				<div class="canvas-title"></div>
+				<canvas id="canvas" width="250" height="122"></canvas>
+				<div class="flex-container canvas-tools">
+					<div class="flex-group tool-buttons">
+						<button id="brush-mode" title="画笔" class="tool-button">✏️</button>
+						<button id="eraser-mode" title="橡皮擦" class="tool-button">🧽</button>
+						<button id="text-mode" title="添加文字" class="tool-button">T</button>
+						<button id="undo-btn" title="撤销" class="tool-button" disabled>⤴</button>
+						<button id="redo-btn" title="重做" class="tool-button" disabled>⤵</button>
+					</div>
+					<div class="flex-group brush-tools">
+						<label for="brush-color">颜色:</label>
+						<select id="brush-color">
+                            <option value="#000000">黑色</option>
+                            <option value="#FF0000">红色</option>
+                            <option value="#FFFF00">黄色</option>
+							<option value="#00FF00">绿色</option>
+							<option value="#0000FF">蓝色</option>
+                            <option value="#FFFFFF">白色</option>
+                        </select>
+						<label for="brush-size">粗细:</label>
+						<input type="number" id="brush-size" value="2" min="1" max="100">
+					</div>
+				</div>
+				<div class="flex-container canvas-tools">
+					<div class="flex-group text-tools">
+						<label for="font-family">字体:</label>
+						<select id="font-family">
+								<option value="Arial">Arial</option>
+								<option value="sans-serif">Sans-serif</option>
+								<option value="monospace">Monospace</option>
+								<option value="SimSun">宋体</option>
+								<option value="SimHei">黑体</option>
+								<option value="Microsoft Yahei">微软雅黑</option>
+								<option value="Microsoft JhengHei">微软正黑体</option>
+								<option value="KaiTi">楷体</option>
+								<option value="NSimSun">新宋体</option>
+								<option value="FangSong">仿宋</option>
+								<option value="YouYuan">幼圆</option>
+								<option value="LiSu">隶书</option>
+								<option value="STHeiti">华文黑体</option>
+								<option value="STXihei">华文细黑</option>
+								<option value="STKaiti">华文楷体</option>
+								<option value="STSong">华文宋体</option>
+								<option value="STFangsong">华文仿宋</option>
+								<option value="STZhongsong">华文中宋</option>
+								<option value="STHupo">华文琥珀</option>
+								<option value="STXinwei">华文新魏</option>
+								<option value="STLiti">华文隶书</option>
+								<option value="STXingkai">华文行楷</option>
+								<option value="FZShuTi">方正舒体</option>
+								<option value="FZYaoti">方正姚体</option>
+								<option value="PingFang SC">苹方</option>
+								<option value="Source Han Sans CN">思源黑体</option>
+								<option value="Source Han Serif SC">思源宋体</option>
+								<option value="WenQuanYi Micro Hei">文泉驿微米黑</option>
+							</optgroup>
+						</select>
+						<label for="font-size">大小:</label>
+						<input type="number" id="font-size" value="16" min="1" max="100">
+					</div>
+					<div class="flex-group text-tools">
+						<input type="text" id="text-input" placeholder="输入文字" style="width:150px">
+						<button id="text-bold" title="粗体">B</button>
+						<button id="text-italic" title="斜体">I</button>
+						<button id="add-text-btn" class="primary">添加文字</button>
+					</div>
+					<div class="flex-group crop-tools">
+						<button id="crop-zoom-in" title="放大" class="secondary">+</button>
+						<button id="crop-zoom-out" title="缩小" class="secondary">-</button>
+						<button id="crop-move-left" title="左移">⇦</button>
+						<button id="crop-move-up" title="上移">⇧</button>
+						<button id="crop-move-down" title="下移">⇩</button>
+						<button id="crop-move-right" title="右移">⇨</button>
+						<button class="primary" onclick="finishCrop()">完成</button>
+					</div>
+				</div>
+			</div>
+        </fieldset>
+    </div>
+    
+    <!-- Debug Calendar Modal -->
+    <div id="debugCalendarModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>调试日历设置</h3>
+                <span class="close" onclick="closeDebugCalendar()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <button type="button" onclick="changeMonth(-1)">&lt;</button>
+                        <span id="currentMonthYear"></span>
+                        <button type="button" onclick="changeMonth(1)">&gt;</button>
+                    </div>
+                    <div class="calendar-grid">
+                        <div class="calendar-weekdays">
+                            <div>日</div>
+                            <div>一</div>
+                            <div>二</div>
+                            <div>三</div>
+                            <div>四</div>
+                            <div>五</div>
+                            <div>六</div>
+                        </div>
+                        <div id="calendarDays" class="calendar-days"></div>
+                    </div>
+                    <div class="calendar-footer">
+                        <button type="button" class="secondary" onclick="closeDebugCalendar()">取消</button>
+                        <button type="button" class="primary" onclick="syncCustomDate()">同步日期</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="text/javascript">
+// Ported from: https://e-paper-display.cn/usb2epd.html
+
+// 固定的六色调色板
+const rgbPalette = [
+  { name: "黄色", r: 255, g: 255, b: 0, value: 0xe2 },
+  { name: "绿色", r: 41, g: 204, b: 20, value: 0x96 },
+  { name: "蓝色", r: 0, g: 0, b: 255, value: 0x1d },
+  { name: "红色", r: 255, g: 0, b: 0, value: 0x4c },
+  { name: "黑色", r: 0, g: 0, b: 0, value: 0x00 },
+  { name: "白色", r: 255, g: 255, b: 255, value: 0xff }
+];
+
+// 四色调色板
+const fourColorPalette = [
+  { name: "黑色", r: 0, g: 0, b: 0, value: 0x00 },
+  { name: "白色", r: 255, g: 255, b: 255, value: 0x01 },
+  { name: "红色", r: 255, g: 0, b: 0, value: 0x03 },
+  { name: "黄色", r: 255, g: 255, b: 0, value: 0x02 }
+];
+
+// 三色调色板
+const threeColorPalette = [
+  { name: "黑色", r: 0, g: 0, b: 0, value: 0x00 },
+  { name: "白色", r: 255, g: 255, b: 255, value: 0x01 },
+  { name: "红色", r: 255, g: 0, b: 0, value: 0x02 }
+];
+
+function adjustContrast(imageData, factor) {
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = Math.min(255, Math.max(0, (data[i] - 128) * factor + 128));
+    data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * factor + 128));
+    data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * factor + 128));
+  }
+  return imageData;
+}
+
+function rgbToLab(r, g, b) {
+  r = r / 255;
+  g = g / 255;
+  b = b / 255;
+
+  r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+  g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+  b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+
+  r *= 100;
+  g *= 100;
+  b *= 100;
+
+  let x = r * 0.4124 + g * 0.3576 + b * 0.1805;
+  let y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+  let z = r * 0.0193 + g * 0.1192 + b * 0.9505;
+
+  x /= 95.047;
+  y /= 100.0;
+  z /= 108.883;
+
+  x = x > 0.008856 ? Math.pow(x, 1 / 3) : (7.787 * x) + (16 / 116);
+  y = y > 0.008856 ? Math.pow(y, 1 / 3) : (7.787 * y) + (16 / 116);
+  z = z > 0.008856 ? Math.pow(z, 1 / 3) : (7.787 * z) + (16 / 116);
+
+  const l = (116 * y) - 16;
+  const a = 500 * (x - y);
+  const bLab = 200 * (y - z);
+
+  return { l, a, b: bLab };
+}
+
+function labDistance(lab1, lab2) {
+  const dl = lab1.l - lab2.l;
+  const da = lab1.a - lab2.a;
+  const db = lab1.b - lab2.b;
+  return Math.sqrt(0.2 * dl * dl + 3 * da * da + 3 * db * db);
+}
+
+function findClosestColor(r, g, b, mode) {
+  let palette;
+
+  if (mode === 'fourColor') {
+    palette = fourColorPalette;
+  } else if (mode === 'threeColor') {
+    palette = threeColorPalette;
+  } else {
+    palette = rgbPalette;
+  }
+
+  // 蓝色特殊情况（仅限非三色、四色模式）
+  if (mode !== 'fourColor' && mode !== 'threeColor' && r < 50 && g < 150 && b > 100) {
+    return rgbPalette[2]; // 蓝色
+  }
+
+  // 三色模式下优先检测红色
+  if (mode === 'threeColor') {
+    // 如果红色通道显著高于绿色和蓝色，且强度足够
+    if (r > 120 && r > g * 1.5 && r > b * 1.5) {
+      return threeColorPalette[2]; // 红色
+    }
+    // 否则根据亮度选择黑或白
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+    return luminance < 128 ? threeColorPalette[0] : threeColorPalette[1]; // 黑色或白色
+  }
+
+  const inputLab = rgbToLab(r, g, b);
+  let minDistance = Infinity;
+  let closestColor = palette[0];
+
+  for (const color of palette) {
+    const colorLab = rgbToLab(color.r, color.g, color.b);
+    const distance = labDistance(inputLab, colorLab);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestColor = color;
+    }
+  }
+
+  return closestColor;
+}
+
+function floydSteinbergDither(imageData, strength, mode) {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+  const tempData = new Uint8ClampedArray(data);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const r = tempData[idx];
+      const g = tempData[idx + 1];
+      const b = tempData[idx + 2];
+
+      const closest = findClosestColor(r, g, b, mode);
+
+      const errR = (r - closest.r) * strength;
+      const errG = (g - closest.g) * strength;
+      const errB = (b - closest.b) * strength;
+
+      if (x + 1 < width) {
+        const idxRight = idx + 4;
+        tempData[idxRight] = Math.min(255, Math.max(0, tempData[idxRight] + errR * 7 / 16));
+        tempData[idxRight + 1] = Math.min(255, Math.max(0, tempData[idxRight + 1] + errG * 7 / 16));
+        tempData[idxRight + 2] = Math.min(255, Math.max(0, tempData[idxRight + 2] + errB * 7 / 16));
+      }
+      if (y + 1 < height) {
+        if (x > 0) {
+          const idxDownLeft = idx + width * 4 - 4;
+          tempData[idxDownLeft] = Math.min(255, Math.max(0, tempData[idxDownLeft] + errR * 3 / 16));
+          tempData[idxDownLeft + 1] = Math.min(255, Math.max(0, tempData[idxDownLeft + 1] + errG * 3 / 16));
+          tempData[idxDownLeft + 2] = Math.min(255, Math.max(0, tempData[idxDownLeft + 2] + errB * 3 / 16));
+        }
+        const idxDown = idx + width * 4;
+        tempData[idxDown] = Math.min(255, Math.max(0, tempData[idxDown] + errR * 5 / 16));
+        tempData[idxDown + 1] = Math.min(255, Math.max(0, tempData[idxDown + 1] + errG * 5 / 16));
+        tempData[idxDown + 2] = Math.min(255, Math.max(0, tempData[idxDown + 2] + errB * 5 / 16));
+        if (x + 1 < width) {
+          const idxDownRight = idx + width * 4 + 4;
+          tempData[idxDownRight] = Math.min(255, Math.max(0, tempData[idxDownRight] + errR * 1 / 16));
+          tempData[idxDownRight + 1] = Math.min(255, Math.max(0, tempData[idxDownRight + 1] + errG * 1 / 16));
+          tempData[idxDownRight + 2] = Math.min(255, Math.max(0, tempData[idxDownRight + 2] + errB * 1 / 16));
+        }
+      }
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const r = tempData[idx];
+      const g = tempData[idx + 1];
+      const b = tempData[idx + 2];
+
+      const closest = findClosestColor(r, g, b, mode);
+      data[idx] = closest.r;
+      data[idx + 1] = closest.g;
+      data[idx + 2] = closest.b;
+    }
+  }
+
+  return imageData;
+}
+
+function atkinsonDither(imageData, strength, mode) {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+  const tempData = new Uint8ClampedArray(data);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const r = tempData[idx];
+      const g = tempData[idx + 1];
+      const b = tempData[idx + 2];
+
+      const closest = findClosestColor(r, g, b, mode);
+
+      data[idx] = closest.r;
+      data[idx + 1] = closest.g;
+      data[idx + 2] = closest.b;
+
+      const errR = (r - closest.r) * strength;
+      const errG = (g - closest.g) * strength;
+      const errB = (b - closest.b) * strength;
+
+      const fraction = 1 / 8;
+
+      if (x + 1 < width) {
+        const idxRight = idx + 4;
+        tempData[idxRight] = Math.min(255, Math.max(0, tempData[idxRight] + errR * fraction));
+        tempData[idxRight + 1] = Math.min(255, Math.max(0, tempData[idxRight + 1] + errG * fraction));
+        tempData[idxRight + 2] = Math.min(255, Math.max(0, tempData[idxRight + 2] + errB * fraction));
+      }
+      if (x + 2 < width) {
+        const idxRight2 = idx + 8;
+        tempData[idxRight2] = Math.min(255, Math.max(0, tempData[idxRight2] + errR * fraction));
+        tempData[idxRight2 + 1] = Math.min(255, Math.max(0, tempData[idxRight2 + 1] + errG * fraction));
+        tempData[idxRight2 + 2] = Math.min(255, Math.max(0, tempData[idxRight2 + 2] + errB * fraction));
+      }
+      if (y + 1 < height) {
+        if (x > 0) {
+          const idxDownLeft = idx + width * 4 - 4;
+          tempData[idxDownLeft] = Math.min(255, Math.max(0, tempData[idxDownLeft] + errR * fraction));
+          tempData[idxDownLeft + 1] = Math.min(255, Math.max(0, tempData[idxDownLeft + 1] + errG * fraction));
+          tempData[idxDownLeft + 2] = Math.min(255, Math.max(0, tempData[idxDownLeft + 2] + errB * fraction));
+        }
+        const idxDown = idx + width * 4;
+        tempData[idxDown] = Math.min(255, Math.max(0, tempData[idxDown] + errR * fraction));
+        tempData[idxDown + 1] = Math.min(255, Math.max(0, tempData[idxDown + 1] + errG * fraction));
+        tempData[idxDown + 2] = Math.min(255, Math.max(0, tempData[idxDown + 2] + errB * fraction));
+        if (x + 1 < width) {
+          const idxDownRight = idx + width * 4 + 4;
+          tempData[idxDownRight] = Math.min(255, Math.max(0, tempData[idxDownRight] + errR * fraction));
+          tempData[idxDownRight + 1] = Math.min(255, Math.max(0, tempData[idxDownRight + 1] + errG * fraction));
+          tempData[idxDownRight + 2] = Math.min(255, Math.max(0, tempData[idxDownRight + 2] + errB * fraction));
+        }
+      }
+      if (y + 2 < height) {
+        const idxDown2 = idx + width * 8;
+        tempData[idxDown2] = Math.min(255, Math.max(0, tempData[idxDown2] + errR * fraction));
+        tempData[idxDown2 + 1] = Math.min(255, Math.max(0, tempData[idxDown2 + 1] + errG * fraction));
+        tempData[idxDown2 + 2] = Math.min(255, Math.max(0, tempData[idxDown2 + 2] + errB * fraction));
+      }
+    }
+  }
+
+  return imageData;
+}
+
+function stuckiDither(imageData, strength, mode) {
+  // 执行Stucki错误扩散算法以处理图像
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+  const tempData = new Uint8ClampedArray(data);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const r = tempData[idx];
+      const g = tempData[idx + 1];
+      const b = tempData[idx + 2];
+
+      const closest = findClosestColor(r, g, b, mode);
+
+      const errR = (r - closest.r) * strength;
+      const errG = (g - closest.g) * strength;
+      const errB = (b - closest.b) * strength;
+
+      const divisor = 42;
+
+      if (x + 1 < width) {
+        const idxRight = idx + 4;
+        tempData[idxRight] = Math.min(255, Math.max(0, tempData[idxRight] + errR * 8 / divisor));
+        tempData[idxRight + 1] = Math.min(255, Math.max(0, tempData[idxRight + 1] + errG * 8 / divisor));
+        tempData[idxRight + 2] = Math.min(255, Math.max(0, tempData[idxRight + 2] + errB * 8 / divisor));
+      }
+      if (x + 2 < width) {
+        const idxRight2 = idx + 8;
+        tempData[idxRight2] = Math.min(255, Math.max(0, tempData[idxRight2] + errR * 4 / divisor));
+        tempData[idxRight2 + 1] = Math.min(255, Math.max(0, tempData[idxRight2 + 1] + errG * 4 / divisor));
+        tempData[idxRight2 + 2] = Math.min(255, Math.max(0, tempData[idxRight2 + 2] + errB * 4 / divisor));
+      }
+      if (y + 1 < height) {
+        if (x > 1) {
+          const idxDownLeft2 = idx + width * 4 - 8;
+          tempData[idxDownLeft2] = Math.min(255, Math.max(0, tempData[idxDownLeft2] + errR * 2 / divisor));
+          tempData[idxDownLeft2 + 1] = Math.min(255, Math.max(0, tempData[idxDownLeft2 + 1] + errG * 2 / divisor));
+          tempData[idxDownLeft2 + 2] = Math.min(255, Math.max(0, tempData[idxDownLeft2 + 2] + errB * 2 / divisor));
+        }
+        if (x > 0) {
+          const idxDownLeft = idx + width * 4 - 4;
+          tempData[idxDownLeft] = Math.min(255, Math.max(0, tempData[idxDownLeft] + errR * 4 / divisor));
+          tempData[idxDownLeft + 1] = Math.min(255, Math.max(0, tempData[idxDownLeft + 1] + errG * 4 / divisor));
+          tempData[idxDownLeft + 2] = Math.min(255, Math.max(0, tempData[idxDownLeft + 2] + errB * 4 / divisor));
+        }
+        const idxDown = idx + width * 4;
+        tempData[idxDown] = Math.min(255, Math.max(0, tempData[idxDown] + errR * 8 / divisor));
+        tempData[idxDown + 1] = Math.min(255, Math.max(0, tempData[idxDown + 1] + errG * 8 / divisor));
+        tempData[idxDown + 2] = Math.min(255, Math.max(0, tempData[idxDown + 2] + errB * 8 / divisor));
+        if (x + 1 < width) {
+          const idxDownRight1 = idx + width * 4 + 4;
+          tempData[idxDownRight1] = Math.min(255, Math.max(0, tempData[idxDownRight1] + errR * 4 / divisor));
+          tempData[idxDownRight1 + 1] = Math.min(255, Math.max(0, tempData[idxDownRight1 + 1] + errG * 4 / divisor));
+          tempData[idxDownRight1 + 2] = Math.min(255, Math.max(0, tempData[idxDownRight1 + 2] + errB * 4 / divisor));
+        }
+        if (x + 2 < width) {
+          const idxDownRight2 = idx + width * 4 + 8;
+          tempData[idxDownRight2] = Math.min(255, Math.max(0, tempData[idxDownRight2] + errR * 2 / divisor));
+          tempData[idxDownRight2 + 1] = Math.min(255, Math.max(0, tempData[idxDownRight2 + 1] + errG * 2 / divisor));
+          tempData[idxDownRight2 + 2] = Math.min(255, Math.max(0, tempData[idxDownRight2 + 2] + errB * 2 / divisor));
+        }
+      }
+      if (y + 2 < height) {
+        if (x > 1) {
+          const idxDown2Left2 = idx + width * 8 - 8;
+          tempData[idxDown2Left2] = Math.min(255, Math.max(0, tempData[idxDown2Left2] + errR * 1 / divisor));
+          tempData[idxDown2Left2 + 1] = Math.min(255, Math.max(0, tempData[idxDown2Left2 + 1] + errG * 1 / divisor));
+          tempData[idxDown2Left2 + 2] = Math.min(255, Math.max(0, tempData[idxDown2Left2 + 2] + errB * 1 / divisor));
+        }
+        if (x > 0) {
+          const idxDown2Left = idx + width * 8 - 4;
+          tempData[idxDown2Left] = Math.min(255, Math.max(0, tempData[idxDown2Left] + errR * 2 / divisor));
+          tempData[idxDown2Left + 1] = Math.min(255, Math.max(0, tempData[idxDown2Left + 1] + errG * 2 / divisor));
+          tempData[idxDown2Left + 2] = Math.min(255, Math.max(0, tempData[idxDown2Left + 2] + errB * 2 / divisor));
+        }
+        const idxDown2 = idx + width * 8;
+        tempData[idxDown2] = Math.min(255, Math.max(0, tempData[idxDown2] + errR * 4 / divisor));
+        tempData[idxDown2 + 1] = Math.min(255, Math.max(0, tempData[idxDown2 + 1] + errG * 4 / divisor));
+        tempData[idxDown2 + 2] = Math.min(255, Math.max(0, tempData[idxDown2 + 2] + errB * 4 / divisor));
+        if (x + 1 < width) {
+          const idxDown2Right = idx + width * 8 + 4;
+          tempData[idxDown2Right] = Math.min(255, Math.max(0, tempData[idxDown2Right] + errR * 2 / divisor));
+          tempData[idxDown2Right + 1] = Math.min(255, Math.max(0, tempData[idxDown2Right + 1] + errG * 2 / divisor));
+          tempData[idxDown2Right + 2] = Math.min(255, Math.max(0, tempData[idxDown2Right + 2] + errB * 2 / divisor));
+        }
+        if (x + 2 < width) {
+          const idxDown2Right2 = idx + width * 8 + 8;
+          tempData[idxDown2Right2] = Math.min(255, Math.max(0, tempData[idxDown2Right2] + errR * 1 / divisor));
+          tempData[idxDown2Right2 + 1] = Math.min(255, Math.max(0, tempData[idxDown2Right2 + 1] + errG * 1 / divisor));
+          tempData[idxDown2Right2 + 2] = Math.min(255, Math.max(0, tempData[idxDown2Right2 + 2] + errB * 1 / divisor));
+        }
+      }
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const r = tempData[idx];
+      const g = tempData[idx + 1];
+      const b = tempData[idx + 2];
+
+      const closest = findClosestColor(r, g, b, mode);
+      data[idx] = closest.r;
+      data[idx + 1] = closest.g;
+      data[idx + 2] = closest.b;
+    }
+  }
+
+  return imageData;
+}
+
+function jarvisDither(imageData, strength, mode) {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+  const tempData = new Uint8ClampedArray(data);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const r = tempData[idx];
+      const g = tempData[idx + 1];
+      const b = tempData[idx + 2];
+
+      const closest = findClosestColor(r, g, b, mode);
+
+      data[idx] = closest.r;
+      data[idx + 1] = closest.g;
+      data[idx + 2] = closest.b;
+
+      const errR = (r - closest.r) * strength;
+      const errG = (g - closest.g) * strength;
+      const errB = (b - closest.b) * strength;
+
+      const divisor = 48;
+
+      if (x + 1 < width) {
+        const idxRight = idx + 4;
+        tempData[idxRight] = Math.min(255, Math.max(0, tempData[idxRight] + errR * 7 / divisor));
+        tempData[idxRight + 1] = Math.min(255, Math.max(0, tempData[idxRight + 1] + errG * 7 / divisor));
+        tempData[idxRight + 2] = Math.min(255, Math.max(0, tempData[idxRight + 2] + errB * 7 / divisor));
+      }
+      if (x + 2 < width) {
+        const idxRight2 = idx + 8;
+        tempData[idxRight2] = Math.min(255, Math.max(0, tempData[idxRight2] + errR * 5 / divisor));
+        tempData[idxRight2 + 1] = Math.min(255, Math.max(0, tempData[idxRight2 + 1] + errG * 5 / divisor));
+        tempData[idxRight2 + 2] = Math.min(255, Math.max(0, tempData[idxRight2 + 2] + errB * 5 / divisor));
+      }
+      if (y + 1 < height) {
+        if (x > 1) {
+          const idxDownLeft2 = idx + width * 4 - 8;
+          tempData[idxDownLeft2] = Math.min(255, Math.max(0, tempData[idxDownLeft2] + errR * 3 / divisor));
+          tempData[idxDownLeft2 + 1] = Math.min(255, Math.max(0, tempData[idxDownLeft2 + 1] + errG * 3 / divisor));
+          tempData[idxDownLeft2 + 2] = Math.min(255, Math.max(0, tempData[idxDownLeft2 + 2] + errB * 3 / divisor));
+        }
+        if (x > 0) {
+          const idxDownLeft = idx + width * 4 - 4;
+          tempData[idxDownLeft] = Math.min(255, Math.max(0, tempData[idxDownLeft] + errR * 5 / divisor));
+          tempData[idxDownLeft + 1] = Math.min(255, Math.max(0, tempData[idxDownLeft + 1] + errG * 5 / divisor));
+          tempData[idxDownLeft + 2] = Math.min(255, Math.max(0, tempData[idxDownLeft + 2] + errB * 5 / divisor));
+        }
+        const idxDown = idx + width * 4;
+        tempData[idxDown] = Math.min(255, Math.max(0, tempData[idxDown] + errR * 7 / divisor));
+        tempData[idxDown + 1] = Math.min(255, Math.max(0, tempData[idxDown + 1] + errG * 7 / divisor));
+        tempData[idxDown + 2] = Math.min(255, Math.max(0, tempData[idxDown + 2] + errB * 7 / divisor));
+        if (x + 1 < width) {
+          const idxDownRight = idx + width * 4 + 4;
+          tempData[idxDownRight] = Math.min(255, Math.max(0, tempData[idxDownRight] + errR * 5 / divisor));
+          tempData[idxDownRight + 1] = Math.min(255, Math.max(0, tempData[idxDownRight + 1] + errG * 5 / divisor));
+          tempData[idxDownRight + 2] = Math.min(255, Math.max(0, tempData[idxDownRight + 2] + errB * 5 / divisor));
+        }
+        if (x + 2 < width) {
+          const idxDownRight2 = idx + width * 4 + 8;
+          tempData[idxDownRight2] = Math.min(255, Math.max(0, tempData[idxDownRight2] + errR * 3 / divisor));
+          tempData[idxDownRight2 + 1] = Math.min(255, Math.max(0, tempData[idxDownRight2 + 1] + errG * 3 / divisor));
+          tempData[idxDownRight2 + 2] = Math.min(255, Math.max(0, tempData[idxDownRight2 + 2] + errB * 3 / divisor));
+        }
+      }
+      if (y + 2 < height) {
+        if (x > 1) {
+          const idxDown2Left2 = idx + width * 8 - 8;
+          tempData[idxDown2Left2] = Math.min(255, Math.max(0, tempData[idxDown2Left2] + errR * 1 / divisor));
+          tempData[idxDown2Left2 + 1] = Math.min(255, Math.max(0, tempData[idxDown2Left2 + 1] + errG * 1 / divisor));
+          tempData[idxDown2Left2 + 2] = Math.min(255, Math.max(0, tempData[idxDown2Left2 + 2] + errB * 1 / divisor));
+        }
+        if (x > 0) {
+          const idxDown2Left = idx + width * 8 - 4;
+          tempData[idxDown2Left] = Math.min(255, Math.max(0, tempData[idxDown2Left] + errR * 3 / divisor));
+          tempData[idxDown2Left + 1] = Math.min(255, Math.max(0, tempData[idxDown2Left + 1] + errG * 3 / divisor));
+          tempData[idxDown2Left + 2] = Math.min(255, Math.max(0, tempData[idxDown2Left + 2] + errB * 3 / divisor));
+        }
+        const idxDown2 = idx + width * 8;
+        tempData[idxDown2] = Math.min(255, Math.max(0, tempData[idxDown2] + errR * 5 / divisor));
+        tempData[idxDown2 + 1] = Math.min(255, Math.max(0, tempData[idxDown2 + 1] + errG * 5 / divisor));
+        tempData[idxDown2 + 2] = Math.min(255, Math.max(0, tempData[idxDown2 + 2] + errB * 5 / divisor));
+        if (x + 1 < width) {
+          const idxDown2Right = idx + width * 8 + 4;
+          tempData[idxDown2Right] = Math.min(255, Math.max(0, tempData[idxDown2Right] + errR * 3 / divisor));
+          tempData[idxDown2Right + 1] = Math.min(255, Math.max(0, tempData[idxDown2Right + 1] + errG * 3 / divisor));
+          tempData[idxDown2Right + 2] = Math.min(255, Math.max(0, tempData[idxDown2Right + 2] + errB * 3 / divisor));
+        }
+        if (x + 2 < width) {
+          const idxDown2Right2 = idx + width * 8 + 8;
+          tempData[idxDown2Right2] = Math.min(255, Math.max(0, tempData[idxDown2Right2] + errR * 1 / divisor));
+          tempData[idxDown2Right2 + 1] = Math.min(255, Math.max(0, tempData[idxDown2Right2 + 1] + errG * 1 / divisor));
+          tempData[idxDown2Right2 + 2] = Math.min(255, Math.max(0, tempData[idxDown2Right2 + 2] + errB * 1 / divisor));
+        }
+      }
+    }
+  }
+
+  return imageData;
+}
+
+function bayerDither(imageData, strength, mode) {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+
+  // 8x8 Bayer matrix (normalized to 0-1 range)
+  const bayerMatrix = [
+    [0, 32, 8, 40, 2, 34, 10, 42],
+    [48, 16, 56, 24, 50, 18, 58, 26],
+    [12, 44, 4, 36, 14, 46, 6, 38],
+    [60, 28, 52, 20, 62, 30, 54, 22],
+    [3, 35, 11, 43, 1, 33, 9, 41],
+    [51, 19, 59, 27, 49, 17, 57, 25],
+    [15, 47, 7, 39, 13, 45, 5, 37],
+    [63, 31, 55, 23, 61, 29, 53, 21]
+  ];
+
+  const matrixSize = 8;
+  const maxThreshold = 64;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+
+      // Get threshold from Bayer matrix
+      const matrixX = x % matrixSize;
+      const matrixY = y % matrixSize;
+      const threshold = (bayerMatrix[matrixY][matrixX] / maxThreshold) * 255;
+
+      // Apply dithering with strength factor
+      const adjustedR = r + (threshold - 127.5) * strength;
+      const adjustedG = g + (threshold - 127.5) * strength;
+      const adjustedB = b + (threshold - 127.5) * strength;
+
+      // Clamp values
+      const clampedR = Math.min(255, Math.max(0, adjustedR));
+      const clampedG = Math.min(255, Math.max(0, adjustedG));
+      const clampedB = Math.min(255, Math.max(0, adjustedB));
+
+      // Find closest color in palette
+      const closest = findClosestColor(clampedR, clampedG, clampedB, mode);
+      
+      data[idx] = closest.r;
+      data[idx + 1] = closest.g;
+      data[idx + 2] = closest.b;
+    }
+  }
+
+  return imageData;
+}
+
+function ditherImage(imageData, alg, strength, mode) {
+  switch (alg) {
+    case 'floydSteinberg':
+      return floydSteinbergDither(imageData, strength, mode);
+    case 'atkinson':
+      return atkinsonDither(imageData, strength, mode);
+    case 'stucki':
+      return stuckiDither(imageData, strength, mode);
+    case 'jarvis':
+      return jarvisDither(imageData, strength, mode);
+    case 'bayer':
+      return bayerDither(imageData, strength, mode);
+    default:
+      return imageData;
+  }
+}
+
+function decodeProcessedData(processedData, width, height, mode) {
+  const imageData = new ImageData(width, height);
+  const data = imageData.data;
+
+  if (mode === 'sixColor') {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const newIndex = (x * height) + (height - 1 - y);
+        const value = processedData[newIndex];
+        const color = rgbPalette.find(c => c.value === value) || rgbPalette[5]; // 默认白色
+        const index = (y * width + x) * 4;
+        data[index] = color.r;
+        data[index + 1] = color.g;
+        data[index + 2] = color.b;
+        data[index + 3] = 255; // Alpha 透明度
+      }
+    }
+  } else if (mode === 'fourColor') {
+    const fourColorValues = [
+      { value: 0x00, r: 0, g: 0, b: 0 },      // 黑色
+      { value: 0x01, r: 255, g: 255, b: 255 }, // 白色
+      { value: 0x03, r: 255, g: 0, b: 0 },     // 红色
+      { value: 0x02, r: 255, g: 255, b: 0 }    // 黄色
+    ];
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const newIndex = (y * width + x) / 4 | 0;
+        const shift = 6 - ((x % 4) * 2);
+        const value = (processedData[newIndex] >> shift) & 0x03;
+        const color = fourColorValues.find(c => c.value === value) || fourColorValues[1]; // 默认白色
+        const index = (y * width + x) * 4;
+        data[index] = color.r;
+        data[index + 1] = color.g;
+        data[index + 2] = color.b;
+        data[index + 3] = 255;
+      }
+    }
+  } else if (mode === 'blackWhiteColor') {
+    const byteWidth = Math.ceil(width / 8);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const byteIndex = y * byteWidth + Math.floor(x / 8);
+        const bitIndex = 7 - (x % 8);
+        const bit = (processedData[byteIndex] >> bitIndex) & 1;
+        const index = (y * width + x) * 4;
+        data[index] = bit ? 255 : 0; // 白或黑
+        data[index + 1] = bit ? 255 : 0;
+        data[index + 2] = bit ? 255 : 0;
+        data[index + 3] = 255;
+      }
+    }
+  } else if (mode === 'threeColor') {
+    const byteWidth = Math.ceil(width / 8);
+    const blackWhiteData = processedData.slice(0, byteWidth * height);
+    const redWhiteData = processedData.slice(byteWidth * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const byteIndex = y * byteWidth + Math.floor(x / 8);
+        const bitIndex = 7 - (x % 8);
+        const blackWhiteBit = (blackWhiteData[byteIndex] >> bitIndex) & 1;
+        const redWhiteBit = (redWhiteData[byteIndex] >> bitIndex) & 1;
+        const index = (y * width + x) * 4;
+        if (!redWhiteBit) {
+          // 红色
+          data[index] = 255;
+          data[index + 1] = 0;
+          data[index + 2] = 0;
+        } else {
+          // 黑或白
+          data[index] = blackWhiteBit ? 255 : 0;
+          data[index + 1] = blackWhiteBit ? 255 : 0;
+          data[index + 2] = blackWhiteBit ? 255 : 0;
+        }
+        data[index + 3] = 255;
+      }
+    }
+  }
+
+  return imageData;
+}
+
+function processImageData(imageData, mode) {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+
+  let processedData;
+
+  if (mode === 'sixColor') {
+    processedData = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const index = (y * width + x) * 4;
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+
+        const closest = findClosestColor(r, g, b, mode);
+        const newIndex = (x * height) + (height - 1 - y);
+        processedData[newIndex] = closest.value;
+      }
+    }
+  } else if (mode === 'fourColor') {
+    processedData = new Uint8Array(Math.ceil((width * height) / 4));
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const index = (y * width + x) * 4;
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+        const closest = findClosestColor(r, g, b, mode); // 使用 fourColorPalette
+        const colorValue = closest.value; // 0x00 (黑), 0x01 (白), 0x02 (红), 0x03 (黄)
+        const newIndex = (y * width + x) / 4 | 0;
+        const shift = 6 - ((x % 4) * 2);
+        processedData[newIndex] |= (colorValue << shift);
+      }
+    }
+  } else if (mode === 'blackWhiteColor') {
+    const byteWidth = Math.ceil(width / 8);
+    processedData = new Uint8Array(byteWidth * height);
+    const threshold = 140;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const index = (y * width + x) * 4;
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+        const grayscale = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+        const bit = grayscale >= threshold ? 1 : 0;
+        const byteIndex = y * byteWidth + Math.floor(x / 8);
+        const bitIndex = 7 - (x % 8);
+        processedData[byteIndex] |= (bit << bitIndex);
+      }
+    }
+  } else if (mode === 'threeColor') {
+    const byteWidth = Math.ceil(width / 8);
+    const blackWhiteThreshold = 140;
+    const redThreshold = 160;
+
+    const blackWhiteData = new Uint8Array(height * byteWidth);
+    const redWhiteData = new Uint8Array(height * byteWidth);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const index = (y * width + x) * 4;
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+        const grayscale = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+
+        const blackWhiteBit = grayscale >= blackWhiteThreshold ? 1 : 0;
+        const blackWhiteByteIndex = y * byteWidth + Math.floor(x / 8);
+        const blackWhiteBitIndex = 7 - (x % 8);
+        if (blackWhiteBit) {
+          blackWhiteData[blackWhiteByteIndex] |= (0x01 << blackWhiteBitIndex);
+        } else {
+          blackWhiteData[blackWhiteByteIndex] &= ~(0x01 << blackWhiteBitIndex);
+        }
+
+        const redWhiteBit = (r > redThreshold && r > g && r > b) ? 0 : 1;
+        const redWhiteByteIndex = y * byteWidth + Math.floor(x / 8);
+        const redWhiteBitIndex = 7 - (x % 8);
+        if (redWhiteBit) {
+          redWhiteData[redWhiteByteIndex] |= (0x01 << redWhiteBitIndex);
+        } else {
+          redWhiteData[redWhiteByteIndex] &= ~(0x01 << redWhiteBitIndex);
+        }
+      }
+    }
+
+    processedData = new Uint8Array(blackWhiteData.length + redWhiteData.length);
+    processedData.set(blackWhiteData, 0);
+    processedData.set(redWhiteData, blackWhiteData.length);
+  }
+
+  return processedData;
+}
+
+</script>
+    <script type="text/javascript">
+let painting = false;
+let lastX = 0;
+let lastY = 0;
+let brushColor = "#000000";
+let brushSize = 2;
+let currentTool = null; // Start with no tool selected
+let textElements = []; // Store text elements for re-rendering after dithering
+let lineSegments = []; // Store line segments for re-rendering after dithering
+let isTextPlacementMode = false;
+let draggingCanvasContext = null; // Backup of the canvas for dragging
+let selectedTextElement = null; // Track the currently selected text for dragging
+let isDraggingText = false; // Track if we're currently dragging text
+let dragOffsetX = 0; // Offset from mouse to text position when dragging
+let dragOffsetY = 0;
+let textBold = false; // Track if text should be bold
+let textItalic = false; // Track if text should be italic
+
+// History management for undo/redo
+let canvasHistory = [];
+let historyStep = -1;
+const MAX_HISTORY = 50; // Limit history to prevent memory issues
+
+function saveCanvasState() {
+  // Remove any history after current step (for when we undo then make new changes)
+  historyStep++;
+  if (historyStep < canvasHistory.length) {
+    canvasHistory.length = historyStep;
+  }
+  
+  // Save current state (canvas data + text/line elements)
+  const state = {
+    canvasData: ctx.getImageData(0, 0, canvas.width, canvas.height),
+    textElements: JSON.parse(JSON.stringify(textElements)),
+    lineSegments: JSON.parse(JSON.stringify(lineSegments))
+  };
+  
+  canvasHistory.push(state);
+  
+  // Limit history size
+  if (canvasHistory.length > MAX_HISTORY) {
+    canvasHistory.shift();
+    historyStep--;
+  }
+  
+  updateHistoryButtons();
+}
+
+function undo() {
+  if (historyStep > 0) {
+    historyStep--;
+    restoreCanvasState(canvasHistory[historyStep]);
+    updateHistoryButtons();
+  }
+}
+
+function redo() {
+  if (historyStep < canvasHistory.length - 1) {
+    historyStep++;
+    restoreCanvasState(canvasHistory[historyStep]);
+    updateHistoryButtons();
+  }
+}
+
+function restoreCanvasState(state) {
+  if (!state) return;
+  
+  // Restore canvas data
+  ctx.putImageData(state.canvasData, 0, 0);
+  
+  // Restore text and line elements
+  textElements = JSON.parse(JSON.stringify(state.textElements));
+  lineSegments = JSON.parse(JSON.stringify(state.lineSegments));
+}
+
+function updateHistoryButtons() {
+  const undoBtn = document.getElementById('undo-btn');
+  const redoBtn = document.getElementById('redo-btn');
+  
+  if (undoBtn) {
+    undoBtn.disabled = historyStep <= 0;
+  }
+  if (redoBtn) {
+    redoBtn.disabled = historyStep >= canvasHistory.length - 1;
+  }
+}
+
+function clearHistory() {
+  canvasHistory = [];
+  historyStep = -1;
+  updateHistoryButtons();
+}
+
+function setCanvasTitle(title) {
+  const canvasTitle = document.querySelector('.canvas-title');
+  if (canvasTitle) {
+    canvasTitle.innerText = title;
+    canvasTitle.style.display = title && title !== '' ? 'block' : 'none';
+  }
+}
+
+function initPaintTools() {
+  document.getElementById('brush-mode').addEventListener('click', () => {
+    if (currentTool === 'brush') {
+      setActiveTool(null, '');
+    } else {
+      setActiveTool('brush', '画笔模式');
+      brushColor = document.getElementById('brush-color').value;
+    }
+  });
+  
+  document.getElementById('eraser-mode').addEventListener('click', () => {
+    if (currentTool === 'eraser') {
+      setActiveTool(null, '');
+    } else {
+      setActiveTool('eraser', '橡皮擦');
+      brushColor = "#FFFFFF";
+    }
+  });
+
+  document.getElementById('text-mode').addEventListener('click', () => {
+    if (currentTool === 'text') {
+      setActiveTool(null, '');
+    } else {
+      setActiveTool('text', '插入文字');
+      brushColor = document.getElementById('brush-color').value;
+    }
+  });
+  
+  document.getElementById('brush-color').addEventListener('change', (e) => {
+    brushColor = e.target.value;
+  });
+  
+  document.getElementById('brush-size').addEventListener('change', (e) => {
+    brushSize = parseInt(e.target.value);
+  });
+
+  document.getElementById('add-text-btn').addEventListener('click', startTextPlacement);
+
+  // Add event listeners for bold and italic buttons
+  document.getElementById('text-bold').addEventListener('click', () => {
+    textBold = !textBold;
+    document.getElementById('text-bold').classList.toggle('primary', textBold);
+  });
+  
+  document.getElementById('text-italic').addEventListener('click', () => {
+    textItalic = !textItalic;
+    document.getElementById('text-italic').classList.toggle('primary', textItalic);
+  });
+  
+  // Undo/Redo buttons
+  document.getElementById('undo-btn').addEventListener('click', undo);
+  document.getElementById('redo-btn').addEventListener('click', redo);
+  
+  canvas.addEventListener('mousedown', startPaint);
+  canvas.addEventListener('mousemove', paint);
+  canvas.addEventListener('mouseup', endPaint);
+  canvas.addEventListener('mouseleave', endPaint);
+  canvas.addEventListener('click', handleCanvasClick);
+  
+  // Touch support
+  canvas.addEventListener('touchstart', onTouchStart);
+  canvas.addEventListener('touchmove', onTouchMove);
+  canvas.addEventListener('touchend', onTouchEnd);
+  
+  // Save initial canvas state
+  saveCanvasState();
+}
+
+function setActiveTool(tool, title) {
+  setCanvasTitle(title);
+  currentTool = tool;
+
+  canvas.parentNode.classList.toggle('brush-mode', currentTool === 'brush');
+  canvas.parentNode.classList.toggle('eraser-mode', currentTool === 'eraser');
+  canvas.parentNode.classList.toggle('text-mode', currentTool === 'text');
+
+  document.getElementById('brush-mode').classList.toggle('active', currentTool === 'brush');
+  document.getElementById('eraser-mode').classList.toggle('active', currentTool === 'eraser');
+  document.getElementById('text-mode').classList.toggle('active', currentTool === 'text');
+
+  document.getElementById('brush-color').disabled = currentTool === 'eraser';
+  document.getElementById('brush-size').disabled = currentTool === 'text';
+
+  // Cancel any pending text placement
+  cancelTextPlacement();
+}
+
+function startPaint(e) {
+  if (!currentTool) return;
+
+  if (currentTool === 'text') {
+    // Check if we're clicking on a text element to drag
+    const textElement = findTextElementAt(e);
+    if (textElement && textElement === selectedTextElement) {
+      isDraggingText = true;
+      
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      
+      // Calculate offset for smooth dragging
+      dragOffsetX = textElement.x - x;
+      dragOffsetY = textElement.y - y;
+      
+      return; // Don't start drawing
+    }
+  } else {
+    painting = true;
+    draw(e);
+  }
+}
+
+function endPaint() {
+  const wasPainting = painting;
+  const wasDraggingText = isDraggingText;
+  
+  painting = false;
+  isDraggingText = false;
+  lastX = 0;
+  lastY = 0;
+  
+  // Save state after drawing or dragging text
+  if (wasPainting || wasDraggingText) {
+    saveCanvasState();
+  }
+}
+
+function paint(e) {
+  if (!currentTool) return;
+
+  if (currentTool === 'text') {
+    if (isDraggingText && selectedTextElement) {
+      dragText(e);
+    }
+  } else {
+    if (painting) {
+      draw(e);
+    }
+  }
+}
+
+function draw(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = brushColor;
+  ctx.lineWidth = brushSize;
+  
+  ctx.beginPath();
+  
+  if (lastX === 0 && lastY === 0) {
+    // For the first point, just do a dot
+    ctx.moveTo(x, y);
+    ctx.lineTo(x+0.1, y+0.1);
+    
+    // Store the dot for redrawing
+    lineSegments.push({
+      type: 'dot',
+      x: x,
+      y: y,
+      color: brushColor,
+      size: brushSize
+    });
+  } else {
+    // Connect to the previous point
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(x, y);
+    
+    // Store the line segment for redrawing
+    lineSegments.push({
+      type: 'line',
+      x1: lastX,
+      y1: lastY,
+      x2: x,
+      y2: y,
+      color: brushColor,
+      size: brushSize
+    });
+  }
+  
+  ctx.stroke();
+  
+  lastX = x;
+  lastY = y;
+}
+
+function handleCanvasClick(e) {
+  if (currentTool === 'text' && isTextPlacementMode) {
+    placeText(e);
+  }
+}
+
+// Improve touch handling for text placement
+function onTouchStart(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    
+    // If in text placement mode, handle as a click
+    if (currentTool === 'text' && isTextPlacementMode) {
+        const mouseEvent = new MouseEvent('click', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+        return;
+    }
+    
+    // Otherwise handle as normal drawing
+    const mouseEvent = new MouseEvent('mousedown', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+    });
+    canvas.dispatchEvent(mouseEvent);
+}
+
+function onTouchMove(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousemove', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+    });
+    canvas.dispatchEvent(mouseEvent);
+}
+
+function onTouchEnd(e) {
+    e.preventDefault();
+    endPaint();
+}
+
+function dragText(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  
+  // Update text position with offset
+  selectedTextElement.x = x + dragOffsetX;
+  selectedTextElement.y = y + dragOffsetY;
+  
+  // Redraw selected text element
+  if (draggingCanvasContext) {
+    ctx.putImageData(draggingCanvasContext, 0, 0);
+  } else {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  ctx.font = selectedTextElement.font;
+  ctx.fillStyle = selectedTextElement.color;
+  ctx.fillText(selectedTextElement.text, selectedTextElement.x, selectedTextElement.y);
+}
+
+function findTextElementAt(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  
+  // Search through text elements in reverse order (top-most first)
+  for (let i = textElements.length - 1; i >= 0; i--) {
+    const text = textElements[i];
+    
+    // Calculate text dimensions
+    ctx.font = text.font;
+    const textWidth = ctx.measureText(text.text).width;
+
+    // Extract font size correctly from the font string
+    // This handles "bold 14px Arial", "italic 14px Arial", "bold italic 14px Arial", etc.
+    const fontSizeMatch = text.font.match(/(\d+)px/);
+    const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1]) : 14; // Default to 14 if not found
+    const textHeight = fontSize * 1.2; // Approximate height
+    
+    // Check if click is within text bounds (allowing for some margin)
+    const margin = 5;
+    if (x >= text.x - margin && 
+        x <= text.x + textWidth + margin && 
+        y >= text.y - textHeight + margin && 
+        y <= text.y + margin) {
+      return text;
+    }
+  }
+  
+  return null;
+}
+
+function startTextPlacement() {
+  const text = document.getElementById('text-input').value.trim();
+  if (!text) {
+      alert('请输入文字内容');
+      return;
+  }
+
+  isTextPlacementMode = true;
+
+  // Add visual feedback
+  setCanvasTitle('点击画布放置文字');
+  canvas.classList.add('text-placement-mode');
+}
+
+function cancelTextPlacement() {
+  isTextPlacementMode = false;
+  canvas.classList.remove('text-placement-mode'); 
+
+  // reset dragging state
+  isDraggingText = false;
+  dragOffsetX = 0;
+  dragOffsetY = 0;
+  selectedTextElement = null;
+  draggingCanvasContext = null;
+}
+
+function placeText(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+
+  const text = document.getElementById('text-input').value;
+  const fontFamily = document.getElementById('font-family').value;
+  const fontSize = document.getElementById('font-size').value;
+
+  // Build font style string
+  let fontStyle = '';
+  if (textItalic) fontStyle += 'italic ';
+  if (textBold) fontStyle += 'bold ';
+  
+  // Create a new text element
+  const newText = {
+    text: text,
+    x: x,
+    y: y,
+    font: `${fontStyle}${fontSize}px ${fontFamily}`,
+    color: brushColor
+  };
+  
+  // Add to our list of text elements
+  textElements.push(newText);
+  
+  // Select this text element for immediate dragging
+  selectedTextElement = newText;
+  draggingCanvasContext = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  
+  // Draw text on canvas
+  ctx.font = newText.font;
+  ctx.fillStyle = newText.color;
+  ctx.fillText(newText.text, newText.x, newText.y);
+  
+  // Save state after adding text
+  saveCanvasState();
+  
+  // Reset
+  document.getElementById('text-input').value = '';
+  isTextPlacementMode = false;
+  canvas.classList.remove('text-placement-mode');
+  setCanvasTitle('拖动新添加文字可调整位置');
+}
+
+function redrawTextElements() {
+  // Redraw all text elements after dithering
+  textElements.forEach(item => {
+    ctx.font = item.font;
+    ctx.fillStyle = item.color;
+    ctx.fillText(item.text, item.x, item.y);
+  });
+}
+
+function redrawLineSegments() {
+  // Redraw all line segments after dithering
+  lineSegments.forEach(segment => {
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = segment.color;
+    ctx.lineWidth = segment.size;
+    ctx.beginPath();
+    
+    if (segment.type === 'dot') {
+      ctx.moveTo(segment.x, segment.y);
+      ctx.lineTo(segment.x+0.1, segment.y+0.1);
+    } else {
+      ctx.moveTo(segment.x1, segment.y1);
+      ctx.lineTo(segment.x2, segment.y2);
+    }
+    
+    ctx.stroke();
+  });
+}
+
+</script>
+    <script type="text/javascript">
+let backgroundZoom = 1;
+let backgroundPanX = 0;
+let backgroundPanY = 0;
+let isPanning = false;
+let lastPanX = 0;
+let lastPanY = 0;
+let lastTouchDistance = 0;
+
+function resetCropStates() {
+  backgroundZoom = 1;
+  backgroundPanX = 0;
+  backgroundPanY = 0;
+  isPanning = false;
+  lastPanX = 0;
+  lastPanY = 0;
+}
+
+function isCropMode() {
+  return canvas.parentNode.classList.contains('crop-mode');
+}
+
+function exitCropMode() {
+  canvas.parentNode.classList.remove('crop-mode');
+  setCanvasTitle("");
+
+  canvas.removeEventListener('wheel', handleBackgroundZoom);
+  canvas.removeEventListener('mousedown', handleBackgroundPanStart);
+  canvas.removeEventListener('mousemove', handleBackgroundPan);
+  canvas.removeEventListener('mouseup', handleBackgroundPanEnd);
+  canvas.removeEventListener('mouseleave', handleBackgroundPanEnd);
+  canvas.removeEventListener('touchstart', handleTouchStart);
+  canvas.removeEventListener('touchmove', handleTouchMove);
+  canvas.removeEventListener('touchend', handleBackgroundPanEnd);
+  canvas.removeEventListener('touchcancel', handleBackgroundPanEnd);
+}
+
+function initializeCrop() {
+  const imageFile = document.getElementById('imageFile');
+  if (imageFile.files.length == 0) {
+    fillCanvas('white');
+    return;
+  }
+
+  exitCropMode();
+  resetCropStates();
+
+  canvas.style.backgroundImage = `url(${URL.createObjectURL(imageFile.files[0])})`;
+  canvas.style.backgroundSize = '100%';
+  canvas.style.backgroundPosition = '';
+  canvas.style.backgroundRepeat = 'no-repeat';
+
+  // add event listeners for zoom and pan
+  canvas.addEventListener('wheel', handleBackgroundZoom);
+  canvas.addEventListener('mousedown', handleBackgroundPanStart);
+  canvas.addEventListener('mousemove', handleBackgroundPan);
+  canvas.addEventListener('mouseup', handleBackgroundPanEnd);
+  canvas.addEventListener('mouseleave', handleBackgroundPanEnd);
+
+  // Touch events for mobile devices
+  canvas.addEventListener('touchstart', handleTouchStart);
+  canvas.addEventListener('touchmove', handleTouchMove);
+  canvas.addEventListener('touchend', handleBackgroundPanEnd);
+  canvas.addEventListener('touchcancel', handleBackgroundPanEnd);
+
+  // Make the canvas transparent
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  setCanvasTitle("裁剪模式: 可用鼠标滚轮或双指触摸缩放图片");
+  canvas.parentNode.classList.add('crop-mode');
+}
+
+function finishCrop() {
+  const imageFile = document.getElementById('imageFile');
+  if (imageFile.files.length == 0) return;
+
+  const image = new Image();
+  image.onload = function () {
+    URL.revokeObjectURL(this.src);
+
+    const fieldsetRect = canvas.getBoundingClientRect();
+    const scale = (image.width / fieldsetRect.width) / backgroundZoom;
+
+    const sx = -backgroundPanX * scale;
+    const sy = -backgroundPanY * scale;
+    const sWidth = fieldsetRect.width * scale;
+    const sHeight = fieldsetRect.height * scale;
+
+    fillCanvas('white');
+    ctx.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+
+    redrawTextElements();
+    redrawLineSegments();
+    convertDithering();
+
+    exitCropMode();
+    saveCanvasState(); // Save state after finishing crop
+  };
+  image.src = URL.createObjectURL(imageFile.files[0]);
+}
+
+function handleTouchStart(e) {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    handleBackgroundPanStart(e.touches[0]);
+  } else if (e.touches.length === 2) {
+    isPanning = false; // Stop panning when zooming
+    lastTouchDistance = getTouchDistance(e.touches);
+  }
+}
+
+function handleTouchMove(e) {
+  e.preventDefault();
+  if (isPanning && e.touches.length === 1) {
+    handleBackgroundPan(e.touches[0]);
+  } else if (e.touches.length === 2) {
+    const newDist = getTouchDistance(e.touches);
+    if (lastTouchDistance > 0) {
+      const zoomFactor = newDist / lastTouchDistance;
+      backgroundZoom *= zoomFactor;
+      backgroundZoom = Math.max(0.1, Math.min(5, backgroundZoom)); // Limit zoom range
+      updateBackgroundTransform();
+    }
+    lastTouchDistance = newDist;
+  }
+}
+
+function handleBackgroundZoom(e) {
+  e.preventDefault();
+  const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+  backgroundZoom *= zoomFactor;
+  backgroundZoom = Math.max(0.1, Math.min(5, backgroundZoom)); // Limit zoom range
+  updateBackgroundTransform();
+}
+
+function handleBackgroundPanStart(e) {
+  isPanning = true;
+  lastPanX = e.clientX;
+  lastPanY = e.clientY;
+  canvas.style.cursor = 'grabbing';
+}
+
+function handleBackgroundPan(e) {
+  if (isPanning) {
+    const deltaX = e.clientX - lastPanX;
+    const deltaY = e.clientY - lastPanY;
+    backgroundPanX += deltaX;
+    backgroundPanY += deltaY;
+    lastPanX = e.clientX;
+    lastPanY = e.clientY;
+    updateBackgroundTransform();
+  }
+}
+
+function handleBackgroundPanEnd() {
+  isPanning = false;
+  lastTouchDistance = 0; // Reset touch distance
+  canvas.style.cursor = 'grab';
+}
+
+function updateBackgroundTransform() {
+  canvas.style.backgroundSize = `${100 * backgroundZoom}%`;
+  canvas.style.backgroundPosition = `${backgroundPanX}px ${backgroundPanY}px`;
+}
+
+function getTouchDistance(touches) {
+  const touch1 = touches[0];
+  const touch2 = touches[1];
+  return Math.sqrt(
+    Math.pow(touch2.clientX - touch1.clientX, 2) +
+    Math.pow(touch2.clientY - touch1.clientY, 2)
+  );
+}
+
+function initCropTools() {
+  document.getElementById('crop-zoom-in').addEventListener('click', (e) => {
+    e.preventDefault();
+    handleBackgroundZoom({ preventDefault: () => {}, deltaY: -1 });
+  });
+
+  document.getElementById('crop-zoom-out').addEventListener('click', (e) => {
+    e.preventDefault();
+    handleBackgroundZoom({ preventDefault: () => {}, deltaY: 1 });
+  });
+
+  document.getElementById('crop-move-left').addEventListener('click', (e) => {
+    e.preventDefault();
+    backgroundPanX -= 10;
+    updateBackgroundTransform();
+  });
+
+  document.getElementById('crop-move-right').addEventListener('click', (e) => {
+    e.preventDefault();
+    backgroundPanX += 10;
+    updateBackgroundTransform();
+  });
+
+  document.getElementById('crop-move-up').addEventListener('click', (e) => {
+    e.preventDefault();
+    backgroundPanY -= 10;
+    updateBackgroundTransform();
+  });
+
+  document.getElementById('crop-move-down').addEventListener('click', (e) => {
+    e.preventDefault();
+    backgroundPanY += 10;
+    updateBackgroundTransform();
+  });
+}
+</script>
+    <script type="text/javascript">
+let bleDevice, gattServer;
+let epdService, epdCharacteristic;
+let startTime, msgIndex, appVersion;
+let firmwareVersion = null;  // Additional firmware version from config
+let canvas, ctx, textDecoder;
+
+// Device information
+let deviceInfo = {
+  modelId: null,
+  width: 0,
+  height: 0
+};
+
+// Debug calendar variables
+let debugCalendarCurrentDate = new Date();
+let debugCalendarSelectedDate = new Date();
+
+const EpdCmd = {
+  SET_PINS:  0x00,
+  INIT:      0x01,
+  CLEAR:     0x02,
+  SEND_CMD:  0x03,
+  SEND_DATA: 0x04,
+  REFRESH:   0x05,
+  SLEEP:     0x06,
+
+  SET_TIME:  0x20,
+  SET_WEEK_START: 0x21,
+  SET_ROTATION: 0x22,
+  LED_CTRL:  0x23,
+  SET_SHOW_DEVICE_ID: 0x24,
+  SET_BLE_MODE: 0x25,
+  SET_CALENDAR_THEME: 0x26,
+  SET_CLOCK_THEME: 0x27,
+  SET_TEMPERATURE_OFFSET: 0x28,
+
+  WRITE_IMG: 0x30, // v1.6
+
+  SET_CONFIG: 0x90,
+  SYS_RESET:  0x91,
+  SYS_SLEEP:  0x92,
+  CFG_ERASE:  0x99,
+};
+
+// 检查蓝牙连接状态的辅助函数
+function checkBluetoothConnection() {
+  if (!bleDevice) {
+    addLog("错误：未找到蓝牙设备，请先点击'连接'按钮");
+    return false;
+  }
+  if (!bleDevice.gatt.connected) {
+    addLog("错误：蓝牙设备未连接，请先点击'连接'按钮");
+    return false;
+  }
+  return true;
+}
+
+// 定义setRotation函数
+function setRotation(rotation) {
+  console.log("setRotation called with:", rotation);
+  addLog(`设置屏幕方向为: ${rotation * 90}°`);
+  addLog("正在切换到日历模式以应用旋转...");
+  
+  if (!checkBluetoothConnection()) {
+    return;
+  }
+  
+  write(EpdCmd.SET_ROTATION, [rotation])
+    .then(result => {
+      console.log("setRotation success:", result);
+      addLog("屏幕方向设置成功！");
+      addLog("屏幕将自动切换到日历模式显示旋转效果");
+    })
+    .catch(error => {
+      console.error("setRotation error:", error);
+      addLog(`设置失败: ${error.message}`);
+    });
+}
+
+// Debug Calendar Functions
+function showDebugCalendar() {
+  debugCalendarCurrentDate = new Date();
+  debugCalendarSelectedDate = new Date();
+  updateCalendarDisplay();
+  document.getElementById('debugCalendarModal').style.display = 'flex';
+}
+
+function closeDebugCalendar() {
+  document.getElementById('debugCalendarModal').style.display = 'none';
+}
+
+function changeMonth(direction) {
+  debugCalendarCurrentDate.setMonth(debugCalendarCurrentDate.getMonth() + direction);
+  updateCalendarDisplay();
+}
+
+function updateCalendarDisplay() {
+  const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月',
+                     '七月', '八月', '九月', '十月', '十一月', '十二月'];
+  
+  // Update month/year header
+  document.getElementById('currentMonthYear').textContent = 
+    `${debugCalendarCurrentDate.getFullYear()}年 ${monthNames[debugCalendarCurrentDate.getMonth()]}`;
+  
+  // Generate calendar days
+  const calendarDays = document.getElementById('calendarDays');
+  calendarDays.innerHTML = '';
+  
+  const year = debugCalendarCurrentDate.getFullYear();
+  const month = debugCalendarCurrentDate.getMonth();
+  const today = new Date();
+  
+  // Get first day of month and number of days
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startDayOfWeek = firstDay.getDay();
+  
+  // Add empty cells for days before the first day of the month
+  for (let i = 0; i < startDayOfWeek; i++) {
+    const prevMonth = new Date(year, month, -startDayOfWeek + i + 1);
+    const dayElement = createDayElement(prevMonth.getDate(), true, false, false);
+    calendarDays.appendChild(dayElement);
+  }
+  
+  // Add days of the current month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const currentDate = new Date(year, month, day);
+    const isToday = currentDate.toDateString() === today.toDateString();
+    const isSelected = currentDate.toDateString() === debugCalendarSelectedDate.toDateString();
+    
+    const dayElement = createDayElement(day, false, isToday, isSelected);
+    dayElement.onclick = () => selectDate(currentDate);
+    calendarDays.appendChild(dayElement);
+  }
+  
+  // Add empty cells for days after the last day of the month
+  const remainingCells = 42 - (startDayOfWeek + daysInMonth); // 6 weeks * 7 days
+  for (let i = 1; i <= remainingCells; i++) {
+    const nextMonth = new Date(year, month + 1, i);
+    const dayElement = createDayElement(nextMonth.getDate(), true, false, false);
+    calendarDays.appendChild(dayElement);
+  }
+}
+
+function createDayElement(day, isOtherMonth, isToday, isSelected) {
+  const dayElement = document.createElement('div');
+  dayElement.className = 'calendar-day';
+  dayElement.textContent = day;
+  
+  if (isOtherMonth) {
+    dayElement.classList.add('other-month');
+  }
+  if (isToday) {
+    dayElement.classList.add('today');
+  }
+  if (isSelected) {
+    dayElement.classList.add('selected');
+  }
+  
+  return dayElement;
+}
+
+function selectDate(date) {
+  debugCalendarSelectedDate = new Date(date);
+  updateCalendarDisplay();
+}
+
+async function syncCustomDate() {
+  // Create a new date with the selected date but current time
+  const now = new Date();
+  const customDate = new Date(
+    debugCalendarSelectedDate.getFullYear(),
+    debugCalendarSelectedDate.getMonth(),
+    debugCalendarSelectedDate.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds()
+  );
+  
+  const timestamp = customDate.getTime() / 1000;
+  const data = new Uint8Array([
+    (timestamp >> 24) & 0xFF,
+    (timestamp >> 16) & 0xFF,
+    (timestamp >> 8) & 0xFF,
+    timestamp & 0xFF,
+    -(new Date().getTimezoneOffset() / 60),
+    1 // Calendar mode
+  ]);
+  
+  if(await write(EpdCmd.SET_TIME, data)) {
+    addLog(`调试日期已同步：${customDate.toLocaleString()}`);
+    closeDebugCalendar();
+  }
+}
+
+const canvasSizes = [
+  // { name: '1.54_152_152', width: 152, height: 152 },
+  // { name: '1.54_200_200', width: 200, height: 200 },
+  // { name: '2.13_212_104', width: 212, height: 104 },
+  { name: '2.13_250_122', width: 250, height: 122 },
+  // { name: '2.13_250_134', width: 250, height: 134 },
+  // { name: '2.66_296_152', width: 296, height: 152 },
+  { name: '2.9_296_128', width: 296, height: 128 },
+  // { name: '2.9_384_168', width: 384, height: 168 },
+  // { name: '3.5_384_184', width: 384, height: 184 },
+  // { name: '3.7_416_240', width: 416, height: 240 },
+  // { name: '3.97_800_480', width: 800, height: 480 },
+  // { name: '4.2_400_300', width: 400, height: 300 },
+  // { name: '5.79_792_272', width: 792, height: 272 },
+  // { name: '7.5_800_480', width: 800, height: 480 },
+  // { name: '10.2_960_640', width: 960, height: 640 },
+  // { name: '10.85_1360_480', width: 1360, height: 480 },
+  // { name: '11.6_960_640', width: 960, height: 640 },
+  // { name: '4E_600_400', width: 600, height: 400 },
+  // { name: '7.3E6', width: 480, height: 800 }
+];
+
+function hex2bytes(hex) {
+  for (var bytes = [], c = 0; c < hex.length; c += 2)
+    bytes.push(parseInt(hex.substr(c, 2), 16));
+  return new Uint8Array(bytes);
+}
+
+function bytes2hex(data) {
+  return new Uint8Array(data).reduce(
+    function (memo, i) {
+      return memo + ("0" + i.toString(16)).slice(-2);
+    }, "");
+}
+
+function intToHex(intIn) {
+  let stringOut = ("0000" + intIn.toString(16)).substr(-4)
+  return stringOut.substring(2, 4) + stringOut.substring(0, 2);
+}
+
+function resetVariables() {
+  gattServer = null;
+  epdService = null;
+  epdCharacteristic = null;
+  msgIndex = 0;
+  firmwareVersion = null;  // Reset firmware version
+  document.getElementById("log").value = '';
+  setLedSelect("0");
+}
+
+async function write(cmd, data, withResponse = true) {
+  if (!epdCharacteristic) {
+    addLog("服务不可用，请检查蓝牙连接");
+    return false;
+  }
+  let payload = [cmd];
+  if (data) {
+    if (typeof data == 'string') data = hex2bytes(data);
+    if (data instanceof Uint8Array) data = Array.from(data);
+    payload.push(...data)
+  }
+  addLog(bytes2hex(payload), '⇑');
+  try {
+    if (withResponse)
+      await epdCharacteristic.writeValueWithResponse(Uint8Array.from(payload));
+    else
+      await epdCharacteristic.writeValueWithoutResponse(Uint8Array.from(payload));
+  } catch (e) {
+    console.error(e);
+    if (e.message) addLog("write: " + e.message);
+    return false;
+  }
+  return true;
+}
+
+async function writeImage(data, step = 'bw') {
+  const chunkSize = document.getElementById('mtusize').value - 2;
+  const interleavedCount = document.getElementById('interleavedcount').value;
+  const count = Math.round(data.length / chunkSize);
+  let chunkIdx = 0;
+  let noReplyCount = interleavedCount;
+
+  for (let i = 0; i < data.length; i += chunkSize) {
+    let currentTime = (new Date().getTime() - startTime) / 1000.0;
+    setStatus(`${step == 'bw' ? '黑白' : '颜色'}块: ${chunkIdx + 1}/${count + 1}, 总用时: ${currentTime}s`);
+    const payload = [
+      (step == 'bw' ? 0x0F : 0x00) | (i == 0 ? 0x00 : 0xF0),
+      ...data.slice(i, i + chunkSize),
+    ];
+    if (noReplyCount > 0) {
+      await write(EpdCmd.WRITE_IMG, payload, false);
+      noReplyCount--;
+    } else {
+      await write(EpdCmd.WRITE_IMG, payload, true);
+      noReplyCount = interleavedCount;
+    }
+    chunkIdx++;
+  }
+}
+
+async function setDriver() {
+  await write(EpdCmd.SET_PINS, document.getElementById("epdpins").value);
+  await write(EpdCmd.INIT, document.getElementById("epddriver").value);
+}
+
+async function syncTime(mode) {
+  if (mode === 2) {
+    if (!confirm('提醒：时钟模式比较费电，并且会缩短屏幕寿命，不建议长期开启，是否继续?')) return;
+  }
+  const timestamp = new Date().getTime() / 1000;
+  const data = new Uint8Array([
+    (timestamp >> 24) & 0xFF,
+    (timestamp >> 16) & 0xFF,
+    (timestamp >> 8) & 0xFF,
+    timestamp & 0xFF,
+    -(new Date().getTimezoneOffset() / 60),
+    mode
+  ]);
+  if (await write(EpdCmd.SET_TIME, data)) {
+    addLog("时间已同步！");
+    addLog("屏幕刷新完成前请不要操作。");
+  }
+}
+
+async function clearScreen() {
+  if (confirm('确认清除屏幕内容?')) {
+    await write(EpdCmd.CLEAR);
+    addLog("清屏指令已发送！");
+    addLog("屏幕刷新完成前请不要操作。");
+  }
+}
+
+async function sendcmd() {
+  const cmdTXT = document.getElementById('cmdTXT').value;
+  if (cmdTXT == '') return;
+  const bytes = hex2bytes(cmdTXT);
+  await write(bytes[0], bytes.length > 1 ? bytes.slice(1) : null);
+}
+
+// Rotate ImageData 90 degrees counterclockwise
+function rotateImageDataCounterclockwise(imageData) {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+  
+  // Create new ImageData with swapped dimensions
+  const rotatedImageData = new ImageData(height, width);
+  const rotatedData = rotatedImageData.data;
+  
+  // Rotate counterclockwise: (x, y) -> (y, width - 1 - x)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const srcIndex = (y * width + x) * 4;
+      const dstX = y;
+      const dstY = width - 1 - x;
+      const dstIndex = (dstY * height + dstX) * 4;
+      
+      rotatedData[dstIndex] = data[srcIndex];         // R
+      rotatedData[dstIndex + 1] = data[srcIndex + 1]; // G
+      rotatedData[dstIndex + 2] = data[srcIndex + 2]; // B
+      rotatedData[dstIndex + 3] = data[srcIndex + 3]; // A
+    }
+  }
+  
+  return rotatedImageData;
+}
+
+async function sendimg() {
+  if (!canvas || !ctx) {
+    addLog("画布未初始化，无法发送图片");
+    return;
+  }
+  
+  if (isCropMode()) {
+    alert("请先完成图片裁剪！发送已取消。");
+    return;
+  }
+
+  const canvasSize = document.getElementById('canvasSize').value;
+  const ditherMode = document.getElementById('ditherMode').value;
+  const epdDriverSelect = document.getElementById('epddriver');
+  const selectedOption = epdDriverSelect.options[epdDriverSelect.selectedIndex];
+
+  // if (selectedOption.getAttribute('data-size') !== canvasSize) {
+  //   if (!confirm("警告：画布尺寸和驱动不匹配，是否继续？")) return;
+  // }
+  if (selectedOption.getAttribute('data-color') !== ditherMode) {
+    if (!confirm("警告：颜色模式和驱动不匹配，是否继续？")) return;
+  }
+
+  startTime = new Date().getTime();
+  const status = document.getElementById("status");
+  status.parentElement.style.display = "block";
+
+  let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  
+  // If canvas is landscape (width > height), it means user rotated the canvas clockwise
+  // The device expects portrait orientation data, so we need to rotate counterclockwise
+  if (canvas.width > canvas.height) {
+    imageData = rotateImageDataCounterclockwise(imageData);
+    addLog(`检测到横屏画布(${canvas.width}x${canvas.height})，已旋转图像数据为竖屏方向`);
+  }
+  
+  const processedData = processImageData(imageData, ditherMode);
+
+  updateButtonStatus(true);
+
+  if (ditherMode === 'fourColor') {
+    await writeImage(processedData, 'color');
+  } else if (ditherMode === 'threeColor') {
+    const halfLength = Math.floor(processedData.length / 2);
+    await writeImage(processedData.slice(0, halfLength), 'bw');
+    await writeImage(processedData.slice(halfLength), 'red');
+  } else if (ditherMode === 'blackWhiteColor') {
+    await writeImage(processedData, 'bw');
+  } else {
+    addLog("当前固件不支持此颜色模式。");
+    updateButtonStatus();
+    return;
+  }
+
+  await write(EpdCmd.REFRESH);
+  updateButtonStatus();
+
+  const sendTime = (new Date().getTime() - startTime) / 1000.0;
+  addLog(`发送完成！耗时: ${sendTime}s`);
+  setStatus(`发送完成！耗时: ${sendTime}s`);
+  addLog("屏幕刷新完成前请不要操作。");
+  setTimeout(() => {
+    status.parentElement.style.display = "none";
+  }, 5000);
+}
+
+function downloadDataArray() {
+  if (!canvas || !ctx) {
+    addLog("画布未初始化，无法下载数据");
+    return;
+  }
+  
+  if (isCropMode()) {
+    alert("请先完成图片裁剪！下载已取消。");
+    return;
+  }
+
+  const mode = document.getElementById('ditherMode').value;
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const processedData = processImageData(imageData, mode);
+
+  if (mode === 'sixColor' && processedData.length !== canvas.width * canvas.height) {
+    console.log(`错误：预期${canvas.width * canvas.height}字节，但得到${processedData.length}字节`);
+    addLog('数组大小不匹配。请检查图像尺寸和模式。');
+    return;
+  }
+
+  const dataLines = [];
+  for (let i = 0; i < processedData.length; i++) {
+    const hexValue = (processedData[i] & 0xff).toString(16).padStart(2, '0');
+    dataLines.push(`0x${hexValue}`);
+  }
+
+  const formattedData = [];
+  for (let i = 0; i < dataLines.length; i += 16) {
+    formattedData.push(dataLines.slice(i, i + 16).join(', '));
+  }
+
+  const colorModeValue = mode === 'sixColor' ? 0 : mode === 'fourColor' ? 1 : mode === 'blackWhiteColor' ? 2 : 3;
+  const arrayContent = [
+    'const uint8_t imageData[] PROGMEM = {',
+    formattedData.join(',\n'),
+    '};',
+    `const uint16_t imageWidth = ${canvas.width};`,
+    `const uint16_t imageHeight = ${canvas.height};`,
+    `const uint8_t colorMode = ${colorModeValue};`
+  ].join('\n');
+
+  const blob = new Blob([arrayContent], { type: 'text/plain' });
+  const link = document.createElement('a');
+  link.download = 'imagedata.h';
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function updateButtonStatus(forceDisabled = false) {
+  const connected = gattServer != null && gattServer.connected;
+  const status = forceDisabled ? 'disabled' : (connected ? null : 'disabled');
+  document.getElementById("reconnectbutton").disabled = (gattServer == null || gattServer.connected) ? 'disabled' : null;
+  document.getElementById("sendcmdbutton").disabled = status;
+  document.getElementById("calendarmodebutton").disabled = status;
+  document.getElementById("debugcalendarbutton").disabled = status;
+  document.getElementById("clockmodebutton").disabled = status;
+  document.getElementById("clearscreenbutton").disabled = status;
+  document.getElementById("sendimgbutton").disabled = status;
+  document.getElementById("setDriverbutton").disabled = status;
+  const ledSelect = document.getElementById("ledSelect");
+  if (ledSelect) ledSelect.disabled = !!status;
+  const showDeviceIdSelect = document.getElementById("showDeviceIdSelect");
+  if (showDeviceIdSelect) showDeviceIdSelect.disabled = !!status;
+  const bleModeSelect = document.getElementById("bleModeSelect");
+  if (bleModeSelect) bleModeSelect.disabled = !!status;
+  const calendarThemeSelect = document.getElementById("calendarThemeSelect");
+  if (calendarThemeSelect) calendarThemeSelect.disabled = !!status;
+}
+
+function disconnect() {
+  updateButtonStatus();
+  resetVariables();
+  // Hide feature options when disconnecting (they will be shown again if device supports them)
+  const ledGroup = document.getElementById('ledSelectGroup');
+  if (ledGroup) ledGroup.style.display = 'none';
+  const deviceIdGroup = document.getElementById('showDeviceIdGroup');
+  if (deviceIdGroup) deviceIdGroup.style.display = 'none';
+  const bleModeGroup = document.getElementById('bleModeGroup');
+  if (bleModeGroup) bleModeGroup.style.display = 'none';
+  const calendarThemeGroup = document.getElementById('calendarThemeGroup');
+  if (calendarThemeGroup) calendarThemeGroup.style.display = 'none';
+  const clockThemeGroup = document.getElementById('clockThemeGroup');
+  if (clockThemeGroup) clockThemeGroup.style.display = 'none';
+  addLog('已断开连接.');
+  document.getElementById("connectbutton").innerHTML = '连接';
+}
+
+async function preConnect() {
+  if (gattServer != null && gattServer.connected) {
+    if (bleDevice != null && bleDevice.gatt.connected) {
+      bleDevice.gatt.disconnect();
+    }
+  }
+  else {
+    resetVariables();
+    try {
+      bleDevice = await navigator.bluetooth.requestDevice({
+        optionalServices: ['62750001-d828-918d-fb46-b6c11c675aec'],
+        acceptAllDevices: true
+      });
+    } catch (e) {
+      console.error(e);
+      if (e.message) addLog("requestDevice: " + e.message);
+      addLog("请检查蓝牙是否已开启，且使用的浏览器支持蓝牙！建议使用以下浏览器：");
+      addLog("• 电脑: Chrome/Edge");
+      addLog("• Android: Chrome/Edge");
+      addLog("• iOS: Bluefy 浏览器");
+      return;
+    }
+
+    await bleDevice.addEventListener('gattserverdisconnected', disconnect);
+    setTimeout(async function () { await connect(); }, 300);
+  }
+}
+
+async function reConnect() {
+  if (bleDevice != null && bleDevice.gatt.connected)
+    bleDevice.gatt.disconnect();
+  resetVariables();
+  addLog("正在重连");
+  setTimeout(async function () { await connect(); }, 300);
+}
+
+function handleNotify(value, idx) {
+  const data = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  if (idx == 0) {
+    addLog(`收到配置：${bytes2hex(data)}`);
+    const epdpins = document.getElementById("epdpins");
+    const epddriver = document.getElementById("epddriver");
+    epdpins.value = bytes2hex(data.slice(0, 7));
+    if (data.length > 10) epdpins.value += bytes2hex(data.slice(10, 11));
+    epddriver.value = bytes2hex(data.slice(7, 8));
+    updateDitcherOptions();
+  } else {
+    if (textDecoder == null) textDecoder = new TextDecoder();
+    const msg = textDecoder.decode(data);
+    addLog(msg, '⇓');
+    if (msg.startsWith('mtu=') && msg.length > 4) {
+      const mtuSize = parseInt(msg.substring(4));
+      document.getElementById('mtusize').value = mtuSize;
+      addLog(`MTU 已更新为: ${mtuSize}`);
+    } else if (msg.startsWith('t=') && msg.length > 2) {
+      const t = parseInt(msg.substring(2)) + new Date().getTimezoneOffset() * 60;
+      addLog(`远端时间: ${new Date(t * 1000).toLocaleString()}`);
+      addLog(`本地时间: ${new Date().toLocaleString()}`);
+    } else if (msg.startsWith('device=') && msg.length > 7) {
+      // Parse device information: device=modelId,width,height
+      const deviceStr = msg.substring(7);
+      const parts = deviceStr.split(',');
+      if (parts.length >= 3) {
+        deviceInfo.modelId = parseInt(parts[0]);
+        deviceInfo.width = parseInt(parts[1]);
+        deviceInfo.height = parseInt(parts[2]);
+        addLog(`设备信息: 型号=${deviceInfo.modelId}, 尺寸=${deviceInfo.width}x${deviceInfo.height}`);
+        updateUIForDevice();
+      }
+    } else if (msg.startsWith('led=') && msg.length > 4) {
+      const mode = msg.substring(4);
+      setLedSelect(mode);
+      // Show LED control option when device sends LED state (device supports LED control)
+      const ledGroup = document.getElementById('ledSelectGroup');
+      if (ledGroup) ledGroup.style.display = '';
+      addLog(`时钟LED闪烁模式: ${mode}`);
+    } else if (msg.startsWith('show_device_id=') && msg.length > 15) {
+      const value = msg.substring(15);
+      setShowDeviceIdSelect(value);
+      // Show device ID option when device sends show_device_id state (device supports this feature)
+      const deviceIdGroup = document.getElementById('showDeviceIdGroup');
+      if (deviceIdGroup) deviceIdGroup.style.display = '';
+      addLog(`设备ID显示: ${value === '1' ? '显示' : '隐藏'}`);
+    } else if (msg.startsWith('ble_mode=') && msg.length > 8) {
+      const value = msg.substring(9);
+      setBleModeSelect(value);
+      // Show BLE mode option when device sends ble_mode state (device supports this feature)
+      const bleModeGroup = document.getElementById('bleModeGroup');
+      if (bleModeGroup) bleModeGroup.style.display = '';
+      const modeText = {
+        '0': '关闭蓝牙',
+        '1': '每小时开启5分钟',
+        '2': '每10分钟开启1分钟',
+        '3': '保持打开'
+      };
+      addLog(`蓝牙广播模式: ${modeText[value] || value}`);
+    } else if (msg.startsWith('calendar_theme=') && msg.length > 14) {
+      const value = msg.substring(15);
+      setCalendarThemeSelect(value);
+      // Show calendar theme option when device sends calendar_theme state (device supports this feature)
+      const calendarThemeGroup = document.getElementById('calendarThemeGroup');
+      if (calendarThemeGroup) calendarThemeGroup.style.display = '';
+      const themeText = {
+        '0': '主题1',
+        '1': '主题2'
+      };
+      addLog(`日历主题: ${themeText[value] || value}`);
+    } else if (msg.startsWith('clock_theme=') && msg.length > 11) {
+      const value = msg.substring(12);
+      setClockThemeSelect(value);
+      // Show clock theme option when device sends clock_theme state (device supports this feature)
+      const clockThemeGroup = document.getElementById('clockThemeGroup');
+      if (clockThemeGroup) clockThemeGroup.style.display = '';
+      const themeText = {
+        '0': '主题1',
+        '1': '主题2'
+      };
+      addLog(`时钟主题: ${themeText[value] || value}`);
+    } else if (msg.startsWith('temperature_offset=') && msg.length > 19) {
+      // Parse signed integer (can be negative)
+      const valueStr = msg.substring(19);
+      const value = parseInt(valueStr);
+      updateTemperatureOffsetDisplay(value);
+      // Show temperature calibration option when device sends temperature_offset state
+      const temperatureCalibrationGroup = document.getElementById('temperatureCalibrationGroup');
+      if (temperatureCalibrationGroup) temperatureCalibrationGroup.style.display = '';
+      const offsetText = value > 0 ? `+${value}` : `${value}`;
+      addLog(`温度校准偏移量: ${offsetText}℃`);
+    } else if (msg.startsWith('firmware_version=') && msg.length > 17) {
+      firmwareVersion = parseInt(msg.substring(17));
+      // Update firmware version display with format: 0x18-01
+      const versionText = firmwareVersion != null ? `0x${appVersion.toString(16)}-${firmwareVersion.toString(16).padStart(2, '0').toUpperCase()}` : `0x${appVersion.toString(16)}`;
+      // Update the version log entry by replacing the previous version line
+      const logElement = document.getElementById("log");
+      if (logElement && logElement.value) {
+        const logValue = logElement.value;
+        const versionLineIndex = logValue.indexOf('固件版本:');
+        if (versionLineIndex !== -1) {
+          const beforeVersion = logValue.substring(0, versionLineIndex);
+          const afterVersion = logValue.substring(versionLineIndex);
+          const lineEnd = afterVersion.indexOf('\n');
+          const rest = lineEnd !== -1 ? afterVersion.substring(lineEnd + 1) : '';
+          logElement.value = beforeVersion + `固件版本: ${versionText}\n` + rest;
+        } else {
+          addLog(`固件版本: ${versionText}`);
+        }
+      }
+    }
+  }
+}
+
+function setShowDeviceIdSelect(value) {
+  const select = document.getElementById('showDeviceIdSelect');
+  if (select) {
+    select.value = value;
+    select.dataset.prevValue = value;
+  }
+}
+
+function setBleModeSelect(value) {
+  const select = document.getElementById('bleModeSelect');
+  if (select) {
+    select.value = value;
+    select.dataset.prevValue = value;
+  }
+}
+
+function setCalendarThemeSelect(value) {
+  const select = document.getElementById('calendarThemeSelect');
+  if (select) {
+    select.value = value;
+    select.dataset.prevValue = value;
+  }
+}
+
+function setClockThemeSelect(value) {
+  const select = document.getElementById('clockThemeSelect');
+  if (select) {
+    select.value = value;
+    select.dataset.prevValue = value;
+  }
+}
+
+function setLedSelect(value) {
+  const ledSelect = document.getElementById('ledSelect');
+  if (ledSelect) {
+    ledSelect.value = value;
+    ledSelect.dataset.prevValue = value;
+  }
+}
+
+async function updateClockLed(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "0";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.LED_CTRL, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+  }
+}
+
+async function updateShowDeviceId(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "1";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.SET_SHOW_DEVICE_ID, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+  }
+}
+
+async function updateBleMode(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "3";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.SET_BLE_MODE, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+    const modeText = {
+      0: '关闭蓝牙',
+      1: '每小时开启5分钟',
+      2: '每10分钟开启1分钟',
+      3: '保持打开'
+    };
+    addLog(`蓝牙广播模式设置已更新: ${modeText[value] || value}`);
+  }
+}
+
+async function updateCalendarTheme(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "0";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.SET_CALENDAR_THEME, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+    const themeText = {
+      0: '主题1',
+      1: '主题2'
+    };
+    addLog(`日历主题设置已更新: ${themeText[value] || value}`);
+  }
+}
+
+async function updateClockTheme(select) {
+  if (!select) return;
+  const previous = select.dataset.prevValue || "0";
+  const value = parseInt(select.value);
+  if (!checkBluetoothConnection()) {
+    select.value = previous;
+    return;
+  }
+  const success = await write(EpdCmd.SET_CLOCK_THEME, [value]);
+  if (!success) {
+    select.value = previous;
+  } else {
+    select.dataset.prevValue = select.value;
+    const themeText = {
+      0: '主题1',
+      1: '主题2'
+    };
+    addLog(`时钟主题设置已更新: ${themeText[value] || value}`);
+  }
+}
+
+// Temperature calibration offset (stored as signed 8-bit: -128 to 127)
+let currentTemperatureOffset = 0;
+
+function updateTemperatureOffsetDisplay(offset) {
+  currentTemperatureOffset = offset;
+  const display = document.getElementById('temperatureOffsetDisplay');
+  if (display) {
+    const offsetText = offset > 0 ? `偏移量: +${offset}℃` : `偏移量: ${offset}℃`;
+    display.textContent = offsetText;
+  }
+}
+
+async function adjustTemperatureOffset(delta) {
+  if (!checkBluetoothConnection()) {
+    addLog('请先连接蓝牙设备');
+    return;
+  }
+  
+  // Calculate new offset value
+  let newOffset = currentTemperatureOffset + delta;
+  
+  // Clamp to signed 8-bit range (-128 to 127)
+  if (newOffset > 127) {
+    newOffset = 127;
+    addLog('温度偏移量已达到最大值 (127℃)');
+    return;
+  }
+  if (newOffset < -128) {
+    newOffset = -128;
+    addLog('温度偏移量已达到最小值 (-128℃)');
+    return;
+  }
+  
+  // Convert to unsigned 8-bit for transmission (signed values are sent as two's complement)
+  const offsetByte = newOffset < 0 ? (256 + newOffset) : newOffset;
+  
+  const success = await write(EpdCmd.SET_TEMPERATURE_OFFSET, [offsetByte]);
+  if (success) {
+    updateTemperatureOffsetDisplay(newOffset);
+    const offsetText = newOffset > 0 ? `+${newOffset}` : `${newOffset}`;
+    addLog(`温度校准偏移量已更新: ${offsetText}℃`);
+  } else {
+    addLog('温度校准偏移量设置失败');
+  }
+}
+
+async function connect() {
+  if (bleDevice == null || epdCharacteristic != null) return;
+
+  try {
+    addLog("正在连接: " + bleDevice.name);
+    gattServer = await bleDevice.gatt.connect();
+    addLog('  找到 GATT Server');
+    epdService = await gattServer.getPrimaryService('62750001-d828-918d-fb46-b6c11c675aec');
+    addLog('  找到 EPD Service');
+    epdCharacteristic = await epdService.getCharacteristic('62750002-d828-918d-fb46-b6c11c675aec');
+    addLog('  找到 Characteristic');
+  } catch (e) {
+    console.error(e);
+    if (e.message) addLog("connect: " + e.message);
+    disconnect();
+    return;
+  }
+
+  try {
+    const versionCharacteristic = await epdService.getCharacteristic('62750003-d828-918d-fb46-b6c11c675aec');
+    const versionData = await versionCharacteristic.readValue();
+    appVersion = versionData.getUint8(0);
+    // Firmware version will be updated when device sends firmware_version message
+    addLog(`固件版本: 0x${appVersion.toString(16)}`);
+  } catch (e) {
+    console.error(e);
+    appVersion = 0x15;
+  }
+
+  if (appVersion < 0x16) {
+    const oldURL = "https://tsl0922.github.io/EPD-nRF5/v1.5";
+    alert("!!!注意!!!\n当前固件版本过低，可能无法正常使用部分功能，建议升级到最新版本。");
+    if (confirm('是否访问旧版本上位机？')) location.href = oldURL;
+    setTimeout(() => {
+      addLog(`如遇到问题，可访问旧版本上位机: ${oldURL}`);
+    }, 500);
+  }
+
+  try {
+    await epdCharacteristic.startNotifications();
+    epdCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+      handleNotify(event.target.value, msgIndex++);
+    });
+  } catch (e) {
+    console.error(e);
+    if (e.message) addLog("startNotifications: " + e.message);
+  }
+
+  await write(EpdCmd.INIT);
+
+  document.getElementById("connectbutton").innerHTML = '断开';
+  updateButtonStatus();
+}
+
+function setStatus(statusText) {
+  document.getElementById("status").innerHTML = statusText;
+}
+
+function addLog(logTXT, action = '') {
+  const log = document.getElementById("log");
+  const now = new Date();
+  const time = String(now.getHours()).padStart(2, '0') + ":" +
+    String(now.getMinutes()).padStart(2, '0') + ":" +
+    String(now.getSeconds()).padStart(2, '0') + " ";
+
+  const logEntry = document.createElement('div');
+  const timeSpan = document.createElement('span');
+  timeSpan.className = 'time';
+  timeSpan.textContent = time;
+  logEntry.appendChild(timeSpan);
+
+  if (action !== '') {
+    const actionSpan = document.createElement('span');
+    actionSpan.className = 'action';
+    actionSpan.innerHTML = action;
+    logEntry.appendChild(actionSpan);
+  }
+  logEntry.appendChild(document.createTextNode(logTXT));
+
+  log.appendChild(logEntry);
+  log.scrollTop = log.scrollHeight;
+
+  while (log.childNodes.length > 20) {
+    log.removeChild(log.firstChild);
+  }
+}
+
+function clearLog() {
+  document.getElementById("log").innerHTML = '';
+}
+
+function fillCanvas(style) {
+  if (!canvas || !ctx) {
+    return;
+  }
+  ctx.fillStyle = style;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function updateImage() {
+  if (!canvas || !ctx) {
+    return;
+  }
+  
+  const imageFile = document.getElementById('imageFile');
+  if (imageFile.files.length == 0) {
+    fillCanvas('white');
+    return;
+  }
+
+  const image = new Image();
+  image.onload = function () {
+    URL.revokeObjectURL(this.src);
+    if (image.width / image.height == canvas.width / canvas.height) {
+      if (isCropMode()) exitCropMode();
+      ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
+      redrawTextElements();
+      redrawLineSegments();
+      convertDithering();
+      saveCanvasState(); // Save state after loading image
+    } else {
+      // alert("图片宽高比例与画布不匹配，将进入裁剪模式。\n请放大图片后移动图片使其充满画布，再点击“完成”按钮。");
+      setActiveTool(null, '');
+      initializeCrop();
+    }
+  };
+  image.src = URL.createObjectURL(imageFile.files[0]);
+}
+
+function updateCanvasSize(sizeNameOverride) {
+  // Check if canvas is initialized
+  if (!canvas) {
+    console.log("Canvas not initialized yet, skipping updateCanvasSize");
+    addLog("Canvas not initialized yet, skipping updateCanvasSize");
+    return;
+  }
+  
+  // Use override value if provided, otherwise read from DOM
+  const selectedSizeName = sizeNameOverride || document.getElementById('canvasSize').value;
+  console.log("updateCanvasSize: sizeNameOverride =", sizeNameOverride);
+  console.log("updateCanvasSize: selectedSizeName =", selectedSizeName);
+  console.log("updateCanvasSize: DOM value =", document.getElementById('canvasSize').value);
+  console.log("updateCanvasSize: available canvasSizes =", canvasSizes.map(s => s.name));
+  addLog(`更新画布尺寸: 选择的尺寸名称 = "${selectedSizeName}"`);
+  
+  if (!selectedSizeName || selectedSizeName.trim() === '') {
+    addLog(`错误: 画布尺寸名称为空`);
+    return;
+  }
+  
+  const selectedSize = canvasSizes.find(size => size.name === selectedSizeName);
+
+  if (!selectedSize) {
+    console.log("Selected size not found:", selectedSizeName);
+    console.log("Available sizes:", canvasSizes.map(s => s.name));
+    addLog(`错误: 未找到画布尺寸 "${selectedSizeName}"`);
+    addLog(`可用的尺寸: ${canvasSizes.map(s => s.name).join(", ")}`);
+    
+    // Try to find a similar size by matching the prefix (e.g., "2.13_250_134" -> "2.13_250_122")
+    let fallbackSize = null;
+    if (selectedSizeName) {
+      const parts = selectedSizeName.split('_');
+      if (parts.length >= 2) {
+        const prefix = parts[0]; // e.g., "2.13"
+        fallbackSize = canvasSizes.find(size => size.name.startsWith(prefix + '_'));
+        if (fallbackSize) {
+          console.log("Found fallback size:", fallbackSize.name);
+          addLog(`找到相似尺寸: ${fallbackSize.name} (${fallbackSize.width}x${fallbackSize.height})`);
+        }
+      }
+    }
+    
+    // If no fallback found, use the first available
+    if (!fallbackSize && canvasSizes.length > 0) {
+      fallbackSize = canvasSizes[0];
+      addLog(`使用默认尺寸: ${fallbackSize.name} (${fallbackSize.width}x${fallbackSize.height})`);
+    }
+    
+    if (fallbackSize) {
+      document.getElementById('canvasSize').value = fallbackSize.name;
+      canvas.width = fallbackSize.width;
+      canvas.height = fallbackSize.height;
+      updateImage();
+    }
+    return;
+  }
+
+  console.log("updateCanvasSize: found size =", selectedSize);
+  addLog(`设置画布尺寸: ${selectedSize.name} (${selectedSize.width}x${selectedSize.height})`);
+  
+  canvas.width = selectedSize.width;
+  canvas.height = selectedSize.height;
+
+  updateImage();
+  
+  // Auto-rotate canvas if needed for landscape screens
+  autoRotateCanvasIfNeeded(selectedSizeName);
+}
+
+function updateDitcherOptions() {
+  const epdDriverSelect = document.getElementById('epddriver');
+  const selectedOption = epdDriverSelect.options[epdDriverSelect.selectedIndex];
+  const colorMode = selectedOption.getAttribute('data-color');
+  const canvasSize = selectedOption.getAttribute('data-size');
+
+  console.log("updateDitcherOptions: colorMode =", colorMode, "canvasSize =", canvasSize);
+  addLog(`更新驱动选项: 颜色模式 = ${colorMode}, 画布尺寸 = ${canvasSize}`);
+
+  if (colorMode) document.getElementById('ditherMode').value = colorMode;
+  if (canvasSize) {
+    console.log("updateDitcherOptions: setting canvasSize to", canvasSize);
+    const canvasSizeElement = document.getElementById('canvasSize');
+    canvasSizeElement.value = canvasSize;
+    console.log("updateDitcherOptions: canvasSize element value after setting =", canvasSizeElement.value);
+  }
+
+  // Only update canvas if it's initialized
+  if (canvas) {
+    // Pass canvasSize directly to avoid timing issues
+    updateCanvasSize(canvasSize); // always update image
+    
+    // Auto-rotate canvas if needed for landscape screens
+    if (canvasSize) {
+      autoRotateCanvasIfNeeded(canvasSize);
+    }
+  }
+}
+
+function updateUIForDevice() {
+  if (!deviceInfo.modelId || !deviceInfo.width || !deviceInfo.height) {
+    return;
+  }
+  
+  // Update driver selection based on model ID
+  const epddriver = document.getElementById("epddriver");
+  const modelIdHex = deviceInfo.modelId.toString(16).padStart(2, '0');
+  
+  // Find matching option
+  for (let i = 0; i < epddriver.options.length; i++) {
+    if (epddriver.options[i].value === modelIdHex) {
+      epddriver.selectedIndex = i;
+      addLog(`自动选择驱动: ${epddriver.options[i].text}`);
+      break;
+    }
+  }
+  
+  // Update canvas size based on device dimensions
+  const canvasSize = document.getElementById("canvasSize");
+  
+  // Try both orientations: width_height and height_width
+  const sizeString1 = `${deviceInfo.width}_${deviceInfo.height}`;
+  const sizeString2 = `${deviceInfo.height}_${deviceInfo.width}`;
+  
+  // First try to find exact match (check both orientations)
+  let foundMatch = false;
+  for (let i = 0; i < canvasSize.options.length; i++) {
+    const optionValue = canvasSize.options[i].value;
+    // Check if option contains either orientation
+    if (optionValue.includes(sizeString1) || optionValue.includes(sizeString2)) {
+      canvasSize.selectedIndex = i;
+      addLog(`自动选择画布尺寸: ${canvasSize.options[i].text}`);
+      foundMatch = true;
+      break;
+    }
+  }
+  
+  // If no exact match found, try to find closest match based on device dimensions
+  if (!foundMatch) {
+    addLog(`设备尺寸 ${deviceInfo.width}x${deviceInfo.height} 未找到精确匹配，尝试选择最接近的尺寸`);
+    
+    // Find the closest available size (check both orientations)
+    let closestIndex = 0;
+    let minDifference = Infinity;
+    
+    for (let i = 0; i < canvasSize.options.length; i++) {
+      const optionValue = canvasSize.options[i].value;
+      // Extract dimensions from option value (format: "size_width_height")
+      const parts = optionValue.split('_');
+      if (parts.length >= 3) {
+        const optionWidth = parseInt(parts[1]);
+        const optionHeight = parseInt(parts[2]);
+        
+        // Calculate difference for both orientations
+        const diff1 = Math.abs(optionWidth - deviceInfo.width) + Math.abs(optionHeight - deviceInfo.height);
+        const diff2 = Math.abs(optionWidth - deviceInfo.height) + Math.abs(optionHeight - deviceInfo.width);
+        const difference = Math.min(diff1, diff2);
+        
+        if (difference < minDifference) {
+          minDifference = difference;
+          closestIndex = i;
+        }
+      }
+    }
+    
+    canvasSize.selectedIndex = closestIndex;
+    addLog(`选择最接近的画布尺寸: ${canvasSize.options[closestIndex].text}`);
+  }
+  
+  // Update dither options based on selected driver
+  // Only call if canvas is initialized
+  if (canvas) {
+    updateDitcherOptions();
+  } else {
+    // If canvas not ready, just update the UI elements without canvas operations
+    const epdDriverSelect = document.getElementById('epddriver');
+    const selectedOption = epdDriverSelect.options[epdDriverSelect.selectedIndex];
+    const colorMode = selectedOption.getAttribute('data-color');
+    
+    if (colorMode) {
+      document.getElementById('ditherMode').value = colorMode;
+    }
+  }
+  
+  addLog(`UI已根据设备信息自动更新`);
+}
+
+function rotateCanvas() {
+  if (!canvas || !ctx) {
+    addLog("画布未初始化，无法旋转");
+    return;
+  }
+  
+  const currentWidth = canvas.width;
+  const currentHeight = canvas.height;
+  
+  // Save old coordinates before updating
+  const oldTextElements = JSON.parse(JSON.stringify(textElements));
+  const oldLineSegments = JSON.parse(JSON.stringify(lineSegments));
+  
+  // Save current canvas content
+  const imageData = ctx.getImageData(0, 0, currentWidth, currentHeight);
+  
+  // Create a temporary canvas to hold the original content
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = currentWidth;
+  tempCanvas.height = currentHeight;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx.putImageData(imageData, 0, 0);
+  
+  // Clear text and lines from temp canvas by drawing white rectangles over them
+  tempCtx.fillStyle = 'white';
+  oldTextElements.forEach(text => {
+    tempCtx.font = text.font;
+    const textWidth = tempCtx.measureText(text.text).width;
+    const fontSizeMatch = text.font.match(/(\d+)px/);
+    const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1]) : 14;
+    const textHeight = fontSize * 1.2;
+    tempCtx.fillRect(text.x - 2, text.y - textHeight - 2, textWidth + 4, textHeight + 4);
+  });
+  
+  // Clear lines from temp canvas
+  oldLineSegments.forEach(segment => {
+    tempCtx.strokeStyle = 'white';
+    tempCtx.lineWidth = segment.size + 2;
+    tempCtx.beginPath();
+    if (segment.type === 'dot') {
+      tempCtx.moveTo(segment.x, segment.y);
+      tempCtx.lineTo(segment.x + 0.1, segment.y + 0.1);
+    } else {
+      tempCtx.moveTo(segment.x1, segment.y1);
+      tempCtx.lineTo(segment.x2, segment.y2);
+    }
+    tempCtx.stroke();
+  });
+  
+  // Swap canvas dimensions
+  canvas.width = currentHeight;
+  canvas.height = currentWidth;
+  
+  // Clear the canvas completely
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Rotate and draw the image (clockwise 90 degrees)
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(Math.PI / 2); // 90 degrees clockwise
+  ctx.drawImage(tempCanvas, -currentWidth / 2, -currentHeight / 2);
+  ctx.restore();
+  
+  // Update coordinates for text elements (clockwise 90 degrees)
+  // Formula: (x, y) -> (height - y, x)
+  textElements.forEach((text, index) => {
+    const oldX = oldTextElements[index].x;
+    const oldY = oldTextElements[index].y;
+    text.x = currentHeight - oldY;
+    text.y = oldX;
+  });
+  
+  // Update coordinates for line segments (clockwise 90 degrees)
+  lineSegments.forEach((segment, index) => {
+    if (segment.type === 'dot') {
+      const oldX = oldLineSegments[index].x;
+      const oldY = oldLineSegments[index].y;
+      segment.x = currentHeight - oldY;
+      segment.y = oldX;
+    } else {
+      const oldX1 = oldLineSegments[index].x1;
+      const oldY1 = oldLineSegments[index].y1;
+      const oldX2 = oldLineSegments[index].x2;
+      const oldY2 = oldLineSegments[index].y2;
+      segment.x1 = currentHeight - oldY1;
+      segment.y1 = oldX1;
+      segment.x2 = currentHeight - oldY2;
+      segment.y2 = oldX2;
+    }
+  });
+  
+  // Redraw text and line elements at new coordinates
+  redrawTextElements();
+  redrawLineSegments();
+  
+  // Clear history to prevent undo/redo conflicts with rotation
+  clearHistory();
+  
+  // Save current state as the new initial state
+  saveCanvasState();
+  
+  // If there's an image file, reload it to fit the new canvas size
+  const imageFile = document.getElementById('imageFile');
+  if (imageFile.files.length > 0) {
+    updateImage();
+  }
+  
+  addLog(`画布已顺时针旋转: ${currentWidth}x${currentHeight} -> ${canvas.width}x${canvas.height}`);
+  addLog("历史记录已清空，无法撤销到旋转前的状态");
+}
+
+// Auto-rotate canvas for screens where width > height (landscape screens)
+function autoRotateCanvasIfNeeded(sizeName) {
+  if (!canvas || !ctx) {
+    return false;
+  }
+  
+  // Check if this is a landscape screen that needs rotation
+  const needsRotation = sizeName.includes('2.13_250_122') || 
+                       sizeName.includes('2.13_250_134') || 
+                       sizeName.includes('2.9_296_128') || 
+                       sizeName.includes('2.66_296_152');
+  
+  if (needsRotation) {
+    const currentWidth = canvas.width;
+    const currentHeight = canvas.height;
+    
+    // Only rotate if current orientation is landscape (width > height)
+    if (currentWidth > currentHeight) {
+      // Check if canvas has content (not just white)
+      const imageData = ctx.getImageData(0, 0, currentWidth, currentHeight);
+      const hasContent = imageData.data.some((value, index) => {
+        // Check if pixel is not white (skip alpha channel)
+        if (index % 4 === 3) return false; // Skip alpha
+        return value < 255;
+      });
+      
+      if (hasContent) {
+        // If canvas has content, rotate it properly
+        // Create a temporary canvas to hold the original image
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = currentWidth;
+        tempCanvas.height = currentHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.putImageData(imageData, 0, 0);
+        
+        // Swap canvas dimensions
+      canvas.width = currentHeight;
+      canvas.height = currentWidth;
+        
+        // Clear the canvas
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Rotate and draw the image (counterclockwise 90 degrees)
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-Math.PI / 2); // 90 degrees counterclockwise
+        ctx.drawImage(tempCanvas, -currentWidth / 2, -currentHeight / 2);
+        ctx.restore();
+        
+        // Rotate text elements coordinates (counterclockwise 90 degrees)
+        // Formula: (x, y) -> (y, width - x)
+        textElements.forEach(text => {
+          const oldX = text.x;
+          const oldY = text.y;
+          text.x = oldY;
+          text.y = currentWidth - oldX;
+        });
+        
+        // Rotate line segments coordinates (counterclockwise 90 degrees)
+        lineSegments.forEach(segment => {
+          if (segment.type === 'dot') {
+            const oldX = segment.x;
+            const oldY = segment.y;
+            segment.x = oldY;
+            segment.y = currentWidth - oldX;
+          } else {
+            const oldX1 = segment.x1;
+            const oldY1 = segment.y1;
+            const oldX2 = segment.x2;
+            const oldY2 = segment.y2;
+            segment.x1 = oldY1;
+            segment.y1 = currentWidth - oldX1;
+            segment.x2 = oldY2;
+            segment.y2 = currentWidth - oldX2;
+          }
+        });
+        
+        // Redraw text and line elements on rotated canvas
+        redrawTextElements();
+        redrawLineSegments();
+      } else {
+        // If canvas is empty, just swap dimensions
+        canvas.width = currentHeight;
+        canvas.height = currentWidth;
+      }
+      
+      addLog(`画布已自动旋转90度: ${currentWidth}x${currentHeight} -> ${canvas.width}x${canvas.height}`);
+      
+      // Redraw the image after rotation
+      updateImage();
+      return true;
+    }
+  }
+  return false;
+}
+
+function clearCanvas() {
+  if (confirm('清除画布内容?')) {
+    fillCanvas('white');
+    textElements = []; // Clear stored text positions
+    lineSegments = []; // Clear stored line segments
+    if (isCropMode()) exitCropMode();
+    saveCanvasState(); // Save state after clearing
+    return true;
+  }
+  return false;
+}
+
+function convertDithering() {
+  if (!canvas || !ctx) {
+    return;
+  }
+  
+  const contrast = parseFloat(document.getElementById('ditherContrast').value);
+  const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const imageData = new ImageData(
+    new Uint8ClampedArray(currentImageData.data),
+    currentImageData.width,
+    currentImageData.height
+  );
+
+  adjustContrast(imageData, contrast);
+
+  const alg = document.getElementById('ditherAlg').value;
+  const strength = parseFloat(document.getElementById('ditherStrength').value);
+  const mode = document.getElementById('ditherMode').value;
+  const processedData = processImageData(ditherImage(imageData, alg, strength, mode), mode);
+  const finalImageData = decodeProcessedData(processedData, canvas.width, canvas.height, mode);
+  ctx.putImageData(finalImageData, 0, 0);
+}
+
+function initEventHandlers() {
+  document.getElementById("epddriver").addEventListener("change", updateDitcherOptions);
+  const imageFileInput = document.getElementById("imageFile");
+  imageFileInput.addEventListener("change", function() {
+    updateImage();
+  });
+  // Fix: allow re-selecting the same file by clearing value on mousedown
+  // This allows the change event to fire even when selecting the same file
+  imageFileInput.addEventListener("mousedown", function() {
+    if (this.files.length > 0) {
+      // Store the current file before clearing
+      const currentFile = this.files[0];
+      // Clear value to allow change event to fire
+      this.value = '';
+      // If user cancels, we can't restore, but that's okay
+      // The change event will handle the new selection
+    }
+  });
+  document.getElementById("ditherMode").addEventListener("change", finishCrop);
+  document.getElementById("ditherAlg").addEventListener("change", finishCrop);
+  document.getElementById("ditherStrength").addEventListener("input", function () {
+    finishCrop();
+    document.getElementById("ditherStrengthValue").innerText = parseFloat(this.value).toFixed(1);
+  });
+  document.getElementById("ditherContrast").addEventListener("input", function () {
+    finishCrop();
+    document.getElementById("ditherContrastValue").innerText = parseFloat(this.value).toFixed(1);
+  });
+  document.getElementById("canvasSize").addEventListener("change", updateCanvasSize);
+}
+
+function checkDebugMode() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const debugMode = urlParams.get('debug');
+  const link = document.getElementById('debug-toggle');
+
+  if (debugMode === 'true') {
+    document.body.classList.add('debug-mode');
+    if (link) {
+      link.innerHTML = '正常模式';
+      link.setAttribute('href', window.location.pathname);
+    }
+    addLog("注意：开发模式功能已开启！不懂请不要随意修改，否则后果自负！");
+  } else {
+    document.body.classList.remove('debug-mode');
+    if (link) {
+      link.innerHTML = '开发模式';
+      link.setAttribute('href', window.location.pathname + '?debug=true');
+    }
+  }
+}
+
+
+document.body.onload = () => {
+  textDecoder = null;
+  canvas = document.getElementById('canvas');
+  ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  initPaintTools();
+  initCropTools();
+  initEventHandlers();
+  updateButtonStatus();
+  checkDebugMode();
+}
+</script>
+    <script type="text/javascript">
+        // 确保setRotation函数可用
+        if (typeof setRotation === 'undefined') {
+            window.setRotation = function(rotation) {
+                alert("请先连接蓝牙设备，然后刷新页面重试");
+            };
+        }
+    </script>
+</body>
+
+</html>
