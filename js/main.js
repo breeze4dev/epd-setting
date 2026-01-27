@@ -806,7 +806,8 @@ async function updateClockTheme(select) {
     select.dataset.prevValue = select.value;
     const themeText = {
       0: '主题1',
-      1: '主题2'
+      1: '主题2',
+      2: '主题3'
     };
     addLog(`时钟主题设置已更新: ${themeText[value] || value}`);
   }
