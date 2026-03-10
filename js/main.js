@@ -49,7 +49,7 @@ function checkBluetoothConnection() {
     return false;
   }
   if (!bleDevice.gatt.connected) {
-    addLog("错误：蓝牙设备未连接，请先点击'连接'按钮");
+    addLog("错误：蓝牙设备未连接，请先点击「连接」按钮");
     return false;
   }
   return true;
@@ -95,12 +95,12 @@ function changeMonth(direction) {
 }
 
 function updateCalendarDisplay() {
-  const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月',
-                     '七月', '八月', '九月', '十月', '十一月', '十二月'];
+  const monthNames = ['??', '??', '??', '??', '??', '??',
+                     '??', '??', '??', '??', '???', '???'];
   
   // Update month/year header
   document.getElementById('currentMonthYear').textContent = 
-    `${debugCalendarCurrentDate.getFullYear()}年 ${monthNames[debugCalendarCurrentDate.getMonth()]}`;
+    `${debugCalendarCurrentDate.getFullYear()}�?${monthNames[debugCalendarCurrentDate.getMonth()]}`;
   
   // Generate calendar days
   const calendarDays = document.getElementById('calendarDays');
@@ -202,6 +202,7 @@ const canvasSizes = [
   // { name: '2.13_250_134', width: 250, height: 134 },
   // { name: '2.66_296_152', width: 296, height: 152 },
   { name: '2.9_296_128', width: 296, height: 128 },
+  { name: '4.2_400_300', width: 400, height: 300 },
   // { name: '2.9_384_168', width: 384, height: 168 },
   // { name: '3.5_384_184', width: 384, height: 184 },
   // { name: '3.7_416_240', width: 416, height: 240 },
@@ -391,11 +392,15 @@ async function sendimg() {
   
   addLog(`发送图像: 画布尺寸=${canvas.width}x${canvas.height}, 颜色模式=${ditherMode}`);
   
-  // If canvas is landscape (width > height), it means user rotated the canvas clockwise
-  // The device expects portrait orientation data, so we need to rotate counterclockwise
-  // Note: For 2.13 inch BW screens, canvas should already be rotated to 104x212 by autoRotateCanvasIfNeeded
-  // But if it's still 212x104, we need to rotate the image data
-  if (canvas.width > canvas.height) {
+  // 4.2" (400x300): device must run firmware that supports model_id 2 or 3 (4.2 BWR). Otherwise display will be garbled.
+  if (canvas.width === 400 && canvas.height === 300) {
+    addLog("4.2inch: ensure device firmware supports 4.2 BWR (model 02/03), else screen may show garbled.");
+  }
+  
+  // If canvas is landscape (width > height), rotate to portrait ONLY for 2.13" etc.
+  // 4.2" (400x300): EPD-nRF5-420 expects native 400x300 layout; rotating would produce 300x400
+  // and wrong byte count (15200 vs 15000 per plane) -> garbled dots.
+  if (canvas.width > canvas.height && !(canvas.width === 400 && canvas.height === 300)) {
     addLog(`检测到横屏画布(${canvas.width}x${canvas.height})，旋转图像数据为竖屏方向`);
     imageData = rotateImageDataCounterclockwise(imageData);
     addLog(`图像数据已旋转: ${imageData.width}x${imageData.height}`);
@@ -567,8 +572,8 @@ function handleNotify(value, idx) {
     epdpins.value = bytes2hex(data.slice(0, 7));
     if (data.length > 10) epdpins.value += bytes2hex(data.slice(10, 11));
     epddriver.value = bytes2hex(data.slice(7, 8));
-    // Don't call updateDitcherOptions here - wait for device= message
-    // updateDitcherOptions will be called by updateUIForDevice after device info is received
+    updateDitcherOptions();
+    updateDeviceControlVisibility();
     addLog(`配置已读取，等待设备信息...`);
   } else {
     if (textDecoder == null) textDecoder = new TextDecoder();
@@ -596,9 +601,15 @@ function handleNotify(value, idx) {
     } else if (msg.startsWith('led=') && msg.length > 4) {
       const mode = msg.substring(4);
       setLedSelect(mode);
-      // Show LED control option when device sends LED state (device supports LED control)
+      // Show LED control only when device supports it AND model is not 4.2" (4.2" does not support LED)
       const ledGroup = document.getElementById('ledSelectGroup');
-      if (ledGroup) ledGroup.style.display = '';
+      if (ledGroup) {
+        const epdDriverSelect = document.getElementById('epddriver');
+        const opt = epdDriverSelect && epdDriverSelect.options[epdDriverSelect.selectedIndex];
+        const is42 = opt && opt.getAttribute('data-size42') === 'true';
+        if (!is42) ledGroup.style.display = '';
+        // else keep hidden for 4.2", do not show even in debug mode
+      }
       addLog(`时钟LED闪烁模式: ${mode}`);
     } else if (msg.startsWith('show_device_id=') && msg.length > 15) {
       const value = msg.substring(15);
@@ -1124,7 +1135,7 @@ function updateUIForDevice() {
   let driverIndex = -1;
   
   for (let i = 0; i < epddriver.options.length; i++) {
-    if (epddriver.options[i].value === modelIdHex) {
+    if (epddriver.options[i].value.toLowerCase() === modelIdHex.toLowerCase()) {
       driverIndex = i;
       const option = epddriver.options[i];
       correctCanvasSize = option.getAttribute('data-size');
@@ -1234,6 +1245,7 @@ function updateUIForDevice() {
   }
   
   addLog(`UI已根据设备信息自动更新`);
+  updateDeviceControlVisibility();
 }
 
 function rotateCanvas() {
@@ -1488,7 +1500,10 @@ function convertDithering() {
 }
 
 function initEventHandlers() {
-  document.getElementById("epddriver").addEventListener("change", updateDitcherOptions);
+  document.getElementById("epddriver").addEventListener("change", function() {
+    updateDitcherOptions();
+    updateDeviceControlVisibility();
+  });
   const imageFileInput = document.getElementById("imageFile");
   imageFileInput.addEventListener("change", function() {
     updateImage();
@@ -1539,6 +1554,35 @@ function checkDebugMode() {
   }
 }
 
+// When 4.2" BWR (SSD1619/UC8176) is selected, show only: calendar mode, clock mode, clear screen, select date, send command.
+function updateDeviceControlVisibility() {
+  var epdDriverSelect = document.getElementById('epddriver');
+  if (!epdDriverSelect) return;
+  var opt = epdDriverSelect.options[epdDriverSelect.selectedIndex];
+  var is42 = opt && opt.getAttribute('data-size42') === 'true';
+  var groupsToHideWhen42 = ['ledSelectGroup', 'showDeviceIdGroup', 'bleModeGroup', 'calendarThemeGroup', 'clockThemeGroup', 'temperatureCalibrationGroup'];
+  var sendCmdGroup = document.getElementById('sendCmdGroup');
+  for (var i = 0; i < groupsToHideWhen42.length; i++) {
+    var el = document.getElementById(groupsToHideWhen42[i]);
+    if (el) {
+      if (groupsToHideWhen42[i] === 'ledSelectGroup' && is42) {
+        el.style.setProperty('display', 'none', 'important');
+      } else {
+        el.style.display = 'none';
+      }
+    }
+  }
+  if (sendCmdGroup) {
+    if (is42) {
+      sendCmdGroup.style.display = 'flex';
+      sendCmdGroup.classList.remove('debug');
+    } else {
+      sendCmdGroup.style.display = '';
+      sendCmdGroup.classList.add('debug');
+    }
+  }
+}
+
 
 document.body.onload = () => {
   textDecoder = null;
@@ -1550,7 +1594,9 @@ document.body.onload = () => {
 
   initPaintTools();
   initCropTools();
+  if (typeof initTemplates === 'function') initTemplates();
   initEventHandlers();
   updateButtonStatus();
+  updateDeviceControlVisibility();
   checkDebugMode();
 }

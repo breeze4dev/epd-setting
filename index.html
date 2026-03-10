@@ -13,7 +13,7 @@
         <h3>墨水屏日历设置</h3>
 		<div class="info-notice">
 			<div class="info-content">
-				<span class="info-text">注意：本工具仅限部分2.13寸和2.9寸阿里价签使用, 其他尺寸价签设置请访问原作者项目</span>
+				<span class="info-text">注意：本工具支持部分2.13寸、2.9寸及4.2寸三色阿里价签和4.2寸LG价签, 其他尺寸价签设置请访问原作者项目</span>
 				<a href="https://github.com/tsl0922/EPD-nRF5" class="info-link" target="_blank">Github</a>
 				<div style="width: 100%;"></div>
 				<span class="info-text">使用方法: </span>
@@ -31,18 +31,16 @@
                 </div>
 				<div class="flex-group debug">
 					<label for="epddriver">驱动</label>
-					<select id="epddriver">
-						<option value="06" data-color="threeColor" data-size="2.13_250_122">SSD16xx(2.13寸三色)</option>
-						<option value="08" data-color="threeColor" data-size="2.13_250_122" selected>SSD16xx(2.13寸三色CE)</option>
-						<option value="07" data-color="threeColor" data-size="2.9_296_128">SSD16xx(2.9寸三色)</option>
-						<option value="09" data-color="threeColor" data-size="2.9_296_128">SSD16xx(2.9寸三色CE)</option>
-					<option value="0a" data-color="blackWhiteColor" data-size="2.13_212_104">SSD16xx(2.13寸黑白)</option>
-					<option value="0b" data-color="blackWhiteColor" data-size="2.13_212_104">SSD16xx(2.13寸黑白CE)</option>
-						<!-- <option value="01" data-color="blackWhiteColor" data-size="4.2_400_300">UC8176/UC8276(黑白)</option>
-						<option value="03" data-color="threeColor" data-size="4.2_400_300">UC8176/UC8276(三色)</option>
-						<option value="04" data-color="blackWhiteColor" data-size="4.2_400_300">SSD1619/SSD1683(黑白)</option>
-						<option value="02" data-color="threeColor" data-size="4.2_400_300">SSD1619/SSD1683(4.2寸三色)</option>
-						<option value="05" data-color="fourColor" data-size="4.2_400_300">JD79668(四色)</option> -->
+					<select id="epddriver" onchange="updateDitcherOptions(); updateDeviceControlVisibility();">
+						<option value="01" data-color="blackWhiteColor" data-size="4.2_400_300" data-size42="true">4.2寸 黑白 (UC8176)</option>
+						<option value="02" data-color="threeColor" data-size="4.2_400_300" data-size42="true">4.2寸 BWR (SSD1619)</option>
+						<option value="03" data-color="threeColor" data-size="4.2_400_300" data-size42="true">4.2寸 BWR (UC8176)</option>
+						<option value="06" data-color="threeColor" data-size="2.13_250_122">2.13寸 三色 (SSD16xx)</option>
+						<option value="08" data-color="threeColor" data-size="2.13_250_122" selected>2.13寸 三色 CE (SSD16xx)</option>
+						<option value="07" data-color="threeColor" data-size="2.9_296_128">2.9寸 三色 (SSD16xx)</option>
+						<option value="09" data-color="threeColor" data-size="2.9_296_128">2.9寸 三色 CE (SSD16xx)</option>
+						<option value="0a" data-color="blackWhiteColor" data-size="2.13_212_104">2.13寸 黑白 (SSD16xx)</option>
+						<option value="0b" data-color="blackWhiteColor" data-size="2.13_212_104">2.13寸 黑白 CE (SSD16xx)</option>
 					</select>
 					<label for="epdpins">引脚</label>
 					<input id="epdpins" type="text" value="">
@@ -109,7 +107,7 @@
                     <button type="button" class="secondary" onclick="adjustTemperatureOffset(-1)">降低1℃</button>
                     <button type="button" class="secondary" onclick="adjustTemperatureOffset(1)">升高1℃</button>
                 </div>
-                <div class="flex-group right debug">
+                <div class="flex-group right debug" id="sendCmdGroup">
                     <input type="text" id="cmdTXT" value="">
                     <button id="sendcmdbutton" type="button" class="primary" onclick="sendcmd()">发送命令</button>
                 </div>
@@ -132,29 +130,13 @@
 			<div class="flex-container options">
 				<div class="flex-group debug">
 					<label for="canvasSize">画布尺寸:</label>
-					<select id="canvasSize">
-						<!-- <option value="1.54_152_152">1.54 (152x152)</option> -->
-						<!-- <option value="1.54_200_200">1.54 (200x200)</option> -->
+					<select id="canvasSize" onchange="updateCanvasSize()">
+						<option value="4.2_400_300">4.2 (400x300)</option>
 						<option value="2.13_212_104">2.13 (212x104)</option>
 						<option value="2.13_250_122">2.13 (250x122)</option>
-						<!-- <option value="2.66_296_152">2.66 (296x152)</option> -->
 						<option value="2.9_296_128" selected>2.9 (296x128)</option>
-						<!-- <option value="2.9_384_168">2.9 (384x168)</option> -->
-						<!-- <option value="3.5_384_184">3.5 (384x184)</option>
-						<option value="3.7_416_240">3.7 (416x240)</option>
-						<option value="3.97_800_480">3.97 (800x480)</option>
-						<option value="4.2_400_300">4.2 (400x300)</option>
 						<option value="5.79_792_272">5.79 (792x272)</option>
 						<option value="5.83_600_448">5.83 (600x448)</option>
-						<option value="5.83_648_480">5.83 (648x480)</option>
-						<option value="7.5_640_384">7.5 (640x384)</option>
-						<option value="7.5_800_480">7.5 (800x480)</option>
-						<option value="7.5_880_528">7.5 (880x528)</option>
-						<option value="10.2_960_640">10.2 (960x640)</option>
-						<option value="10.85_1360_480">10.85 (1360x480)</option>
-						<option value="11.6_960_640">11.6 (960x640)</option>
-						<option value="4E_600_400">4E (600x400)</option>
-						<option value="7.3E6">7.3E6 (480x800)</option> -->
 					</select>
 				</div>
 				<div class="flex-group debug">
@@ -214,6 +196,7 @@
 						<button id="text-mode" title="添加文字" class="tool-button">T</button>
 						<button id="undo-btn" title="撤销" class="tool-button" disabled>⤴</button>
 						<button id="redo-btn" title="重做" class="tool-button" disabled>⤵</button>
+						<button id="template-mode" title="模板" class="tool-button">📋</button>
 					</div>
 					<div class="flex-group brush-tools">
 						<label for="brush-color">颜色:</label>
@@ -282,6 +265,45 @@
 						<button class="primary" onclick="finishCrop()">完成</button>
 					</div>
 				</div>
+				<div id="template-panel-inline" class="template-panel-inline" aria-hidden="true">
+					<div class="template-panel-inner">
+						<div class="schedule-form">
+							<div class="schedule-form-row schedule-form-row-1">
+								<div class="schedule-field schedule-field-title">
+									<label for="schedule-title">标题</label>
+									<input type="text" id="schedule-title" placeholder="自定义标题" maxlength="20">
+								</div>
+								<button type="button" class="primary template-apply" id="template-apply-schedule">应用到画布</button>
+							</div>
+							<div class="schedule-form-row schedule-form-row-2">
+								<div class="schedule-field schedule-field-days">
+									<label>星期</label>
+									<div class="schedule-days-list">
+										<label class="schedule-day-check"><input type="checkbox" checked data-day="1"> 一</label>
+										<label class="schedule-day-check"><input type="checkbox" checked data-day="2"> 二</label>
+										<label class="schedule-day-check"><input type="checkbox" checked data-day="3"> 三</label>
+										<label class="schedule-day-check"><input type="checkbox" checked data-day="4"> 四</label>
+										<label class="schedule-day-check"><input type="checkbox" checked data-day="5"> 五</label>
+										<label class="schedule-day-check"><input type="checkbox" data-day="6"> 六</label>
+										<label class="schedule-day-check"><input type="checkbox" data-day="7"> 日</label>
+									</div>
+								</div>
+								<div class="schedule-field schedule-field-slots-ctrl">
+									<label>时段</label>
+									<button type="button" class="secondary schedule-slot-remove" id="schedule-slot-remove">−</button>
+									<span id="schedule-slot-count">5</span>
+									<button type="button" class="secondary schedule-slot-add" id="schedule-slot-add">+</button>
+								</div>
+								<div class="schedule-field schedule-field-csv">
+									<button type="button" class="secondary" id="schedule-export-csv">导出 CSV</button>
+									<button type="button" class="secondary" id="schedule-import-csv-btn">导入 CSV</button>
+									<input type="file" id="schedule-import-csv" accept=".csv" style="display:none">
+								</div>
+							</div>
+							<div id="schedule-slots" class="schedule-slots"></div>
+						</div>
+					</div>
+				</div>
 			</div>
         </fieldset>
     </div>
@@ -324,6 +346,7 @@
     <script type="text/javascript" src="js/dithering.js?v=20250731"></script>
     <script type="text/javascript" src="js/paint.js?v=20250731"></script>
     <script type="text/javascript" src="js/crop.js?v=20250731"></script>
+    <script type="text/javascript" src="js/templates.js?v=20250731"></script>
     <script type="text/javascript" src="js/main.js?v=20250731"></script>
     <script type="text/javascript">
         // 确保setRotation函数可用
