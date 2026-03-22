@@ -537,8 +537,8 @@ async function preConnect() {
     resetVariables();
     try {
       bleDevice = await navigator.bluetooth.requestDevice({
-        optionalServices: ['62750001-d828-918d-fb46-b6c11c675aec'],
-        acceptAllDevices: true
+        filters: [{ namePrefix: 'NRF' }],
+        optionalServices: ['62750001-d828-918d-fb46-b6c11c675aec']
       });
     } catch (e) {
       console.error(e);
