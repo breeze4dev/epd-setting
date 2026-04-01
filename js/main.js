@@ -392,20 +392,22 @@ async function sendimg() {
   
   addLog(`发送图像: 画布尺寸=${canvas.width}x${canvas.height}, 颜色模式=${ditherMode}`);
   
-  // 4.2" (400x300): device must run firmware that supports model_id 2 or 3 (4.2 BWR). Otherwise display will be garbled.
-  if (canvas.width === 400 && canvas.height === 300) {
-    addLog("4.2inch: ensure device firmware supports 4.2 BWR (model 02/03), else screen may show garbled.");
-  }
-  
-  // If canvas is landscape (width > height), rotate to portrait ONLY for 2.13" etc.
-  // 4.2" (400x300): EPD-nRF5-420 expects native 400x300 layout; rotating would produce 300x400
-  // and wrong byte count (15200 vs 15000 per plane) -> garbled dots.
-  if (canvas.width > canvas.height && !(canvas.width === 400 && canvas.height === 300)) {
-    addLog(`检测到横屏画布(${canvas.width}x${canvas.height})，旋转图像数据为竖屏方向`);
-    imageData = rotateImageDataCounterclockwise(imageData);
-    addLog(`图像数据已旋转: ${imageData.width}x${imageData.height}`);
+  const is42 = selectedOption && selectedOption.getAttribute('data-size42') === 'true';
+  if (is42) {
+    addLog("4.2inch: using native 400x300 layout");
+    if (canvas.width === 300 && canvas.height === 400) {
+      addLog("检测到 4.2 画布已旋转为 300x400，发送前纠正回 400x300");
+      imageData = rotateImageDataCounterclockwise(imageData); // 300x400 -> 400x300
+    } else if (!(canvas.width === 400 && canvas.height === 300)) {
+      addLog(`警告：4.2 画布尺寸异常(${canvas.width}x${canvas.height})，建议切换回 400x300 以避免乱码`);
+    }
   } else {
-    addLog(`画布已是竖屏方向(${canvas.width}x${canvas.height})，无需旋转`);
+    // If canvas is landscape (width > height), rotate to portrait for non-4.2 screens
+    if (canvas.width > canvas.height) {
+      addLog(`检测到横屏画布(${canvas.width}x${canvas.height})，旋转图像数据为竖屏方向`);
+      imageData = rotateImageDataCounterclockwise(imageData);
+      addLog(`检测到横屏画布(${canvas.width}x${canvas.height})，已旋转图像数据为竖屏方向`);
+    }
   }
   
   const processedData = processImageData(imageData, ditherMode);
