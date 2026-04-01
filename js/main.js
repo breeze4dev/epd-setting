@@ -95,12 +95,12 @@ function changeMonth(direction) {
 }
 
 function updateCalendarDisplay() {
-  const monthNames = ['??', '??', '??', '??', '??', '??',
-                     '??', '??', '??', '??', '???', '???'];
+  const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月',
+                     '七月', '八月', '九月', '十月', '十一月', '十二月'];
   
   // Update month/year header
   document.getElementById('currentMonthYear').textContent = 
-    `${debugCalendarCurrentDate.getFullYear()}�?${monthNames[debugCalendarCurrentDate.getMonth()]}`;
+    `${debugCalendarCurrentDate.getFullYear()}年 ${monthNames[debugCalendarCurrentDate.getMonth()]}`;
   
   // Generate calendar days
   const calendarDays = document.getElementById('calendarDays');
@@ -639,7 +639,9 @@ function handleNotify(value, idx) {
       if (calendarThemeGroup) calendarThemeGroup.style.display = '';
       const themeText = {
         '0': '主题1',
-        '1': '主题2'
+        '1': '主题2',
+        '2': '主题3',
+        '3': '主题4'
       };
       addLog(`日历主题: ${themeText[value] || value}`);
     } else if (msg.startsWith('clock_theme=') && msg.length > 11) {
@@ -796,7 +798,9 @@ async function updateCalendarTheme(select) {
     select.dataset.prevValue = select.value;
     const themeText = {
       0: '主题1',
-      1: '主题2'
+      1: '主题2',
+      2: '主题3',
+      3: '主题4'
     };
     addLog(`日历主题设置已更新: ${themeText[value] || value}`);
   }
