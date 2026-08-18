@@ -3858,8 +3858,9 @@ function rlePackFlashPackets(data, maxRlePayload, maxUnc) {
 let bleDevice, gattServer;
 let epdService, epdCharacteristic;
 let startTime, msgIndex, appVersion;
-let firmwareVersion = null;  // Additional firmware version from config
-/* Host treats >=0x3C as multi-image capable (matches FIRMWARE_VERSION). */
+let firmwareVersion = null;  // FW_BUILD (feature gate), not semver major
+let firmwareVersionLabel = null; // e.g. "2.0.0+63" for UI
+/* Host treats build >=60 (0x3C) as multi-image capable. */
 const FW_IMG_MULTI_MIN = 0x3C;
 let imgMultiSupported = false;
 let canvas, ctx, textDecoder;
@@ -3881,6 +3882,24 @@ let deviceInfo = {
 // Debug calendar variables
 let debugCalendarCurrentDate = new Date();
 let debugCalendarSelectedDate = new Date();
+
+/** Parse device payload: "MAJOR.MINOR.PATCH+BUILD" or legacy plain integer. */
+function parseFirmwareVersionPayload(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  const plus = s.lastIndexOf('+');
+  if (plus >= 0) {
+    const build = parseInt(s.substring(plus + 1), 10);
+    if (Number.isFinite(build)) {
+      return { label: s, build };
+    }
+  }
+  const n = parseInt(s, 10);
+  if (Number.isFinite(n)) {
+    return { label: s, build: n };
+  }
+  return null;
+}
 
 function setImgMultiUiVisible(on) {
   imgMultiSupported = !!on;
@@ -3910,11 +3929,11 @@ function noteImgMultiFromFirmwareVersion(ver) {
   if (ver >= FW_IMG_MULTI_MIN) {
     if (!imgMultiSupported) {
       setImgMultiUiVisible(true);
-      addLog(`固件 0x${ver.toString(16)} 支持多图槽位`);
+      addLog(`img slots: on (build ${ver})`);
     }
   } else if (!imgMultiSupported) {
     setImgMultiUiVisible(false);
-    addLog(`固件 0x${ver.toString(16)} 为旧版：隐藏多图槽位界面（仅直写屏幕）`);
+    addLog(`img slots: off (build ${ver})`);
   }
 }
 
@@ -4235,6 +4254,7 @@ function resetVariables() {
   epdCharacteristic = null;
   msgIndex = 0;
   firmwareVersion = null;
+  firmwareVersionLabel = null;
   imgMultiSupported = false;
   negotiatedMaxDataLen = 0;
   rleSupport = false;
@@ -5914,10 +5934,19 @@ function handleNotify(value, idx) {
       const offsetText = value > 0 ? `+${value}` : `${value}`;
       addLog(`温度校准偏移量: ${offsetText}℃`);
     } else if (msg.startsWith('firmware_version=') && msg.length > 17) {
-      firmwareVersion = parseInt(msg.substring(17));
-      noteImgMultiFromFirmwareVersion(firmwareVersion);
-      // Update firmware version display with format: 0x18-01
-      const versionText = firmwareVersion != null ? `0x${appVersion.toString(16)}-${firmwareVersion.toString(16).padStart(2, '0').toUpperCase()}` : `0x${appVersion.toString(16)}`;
+      const parsed = parseFirmwareVersionPayload(msg.substring(17));
+      if (parsed) {
+        firmwareVersion = parsed.build;
+        firmwareVersionLabel = parsed.label;
+        noteImgMultiFromFirmwareVersion(firmwareVersion);
+      }
+      const versionText = firmwareVersionLabel
+        ? (appVersion != null
+            ? `0x${Number(appVersion).toString(16)} / ${firmwareVersionLabel}`
+            : firmwareVersionLabel)
+        : (firmwareVersion != null
+            ? `0x${appVersion.toString(16)}-${firmwareVersion.toString(16).padStart(2, '0').toUpperCase()}`
+            : `0x${appVersion.toString(16)}`);
       // Update the version log entry by replacing the previous version line
       const logElement = document.getElementById("log");
       if (logElement && logElement.value) {
@@ -6187,7 +6216,7 @@ async function connect() {
       } catch (_) { /* old firmware: no img= reply */ }
     }
     if (!imgMultiSupported && firmwareVersion != null && firmwareVersion < FW_IMG_MULTI_MIN) {
-      addLog('当前为旧固件，已隐藏多图槽位相关界面');
+      addLog(`img slots: off (build ${firmwareVersion})`);
     }
   }, 800);
 }
