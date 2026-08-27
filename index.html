@@ -453,6 +453,10 @@ select {
     padding: .3rem 2.25rem .3rem .75rem;
 }
 
+#epdkeypin {
+    width: 5rem;
+}
+
 input:focus,
 select:focus {
     border: 1px solid #86b7fe;
@@ -1067,13 +1071,19 @@ body.debug-mode .template-panel-inline {
 
 /* Image slot grid + transfer progress */
 .img-slot-section {
-    margin: 0.5rem 0 0.75rem;
+    margin: 0.5rem 0 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.img-slot-actions {
+    margin: 0.25rem 0 0.75rem;
     padding-bottom: 0.65rem;
     border-bottom: 1px dotted #AAA;
 }
 
 .img-slot-hint {
-    margin: 0.25rem 0 0.5rem;
+    margin: 0.2rem 0 0.15rem;
     font-size: 85%;
     color: #666;
 }
@@ -1202,9 +1212,11 @@ body.debug-mode .img-carousel-note {
 }
 
 .transfer-status {
-    display: none;
+    display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    margin: 2px 0 8px;
+    padding-bottom: 8px;
 }
 
 .transfer-status-row {
@@ -1463,6 +1475,8 @@ body.debug-mode .modal-foot {
 					</select>
 					<label for="epdpins">引脚</label>
 					<input id="epdpins" type="text" value="">
+					<label for="epdkeypin">按键IO</label>
+					<input id="epdkeypin" type="number" min="0" max="31" value="27" title="P0.x">
 					<button id="setDriverbutton" type="button" class="primary" onclick="setDriver()">确认</button>
 				</div>
             </div>
@@ -1547,37 +1561,47 @@ body.debug-mode .modal-foot {
 		<fieldset>
         	<legend>蓝牙传图</legend>
 			<div id="imgMultiUi" hidden>
-			<div class="img-slot-section">
-				<label>图片槽位</label>
-				<p class="img-slot-hint" id="imgSlotHint">连接设备后点「刷新槽位」；尾部空槽隐藏，可点「新增槽位」展开</p>
-				<div id="imgSlotGrid" class="img-slot-grid" role="listbox" aria-label="图片槽位"></div>
-				<div class="flex-container">
-					<div class="flex-group">
-						<button type="button" class="secondary" onclick="imgRefreshInfo()">刷新槽位</button>
-						<button type="button" class="secondary" onclick="imgShowSlot()">显示此槽</button>
-						<button type="button" class="secondary" onclick="imgReadSlot()">读取图片</button>
-						<button type="button" class="secondary" onclick="imgReadAllSlots()">读取全部</button>
-						<button type="button" class="secondary" onclick="imgShowToCanvas()">显示到画布</button>
-						<button type="button" class="secondary" onclick="imgDeleteSlot()">删除此槽</button>
-						<button type="button" class="secondary" onclick="imgClearAllSlots()">清空全部</button>
-					</div>
-				</div>
-				<div class="flex-container img-carousel-row">
-					<div class="flex-group img-carousel-interval">
-						<label for="imgCarouselVal">轮播间隔</label>
-						<input type="number" id="imgCarouselVal" min="0" max="240" value="0" class="img-carousel-input">
-						<label><input type="radio" name="imgCarUnit" value="min" checked onchange="imgCarouselUnitChanged()"> 分钟</label>
-						<label><input type="radio" name="imgCarUnit" value="hour" onchange="imgCarouselUnitChanged()"> 小时</label>
-						<span class="img-carousel-note">0=关，最低 5 分钟</span>
-					</div>
-					<div class="flex-group">
-						<label>轮播模式</label>
-						<label><input type="radio" name="imgCarMode" value="0" checked> 随机</label>
-						<label><input type="radio" name="imgCarMode" value="1"> 顺序</label>
-						<button type="button" class="primary" onclick="imgSetCarousel()">设置轮播</button>
-					</div>
+				<div class="img-slot-section">
+					<label>图片槽位</label>
+					<div id="imgSlotGrid" class="img-slot-grid" role="listbox" aria-label="图片槽位"></div>
+					<p class="img-slot-hint" id="imgSlotHint">连接设备后点「刷新槽位」；尾部空槽隐藏，可点「新增槽位」展开</p>
 				</div>
 			</div>
+			<div class="status-bar transfer-status">
+				<div class="transfer-status-row"><b>状态：</b><span id="status"></span></div>
+				<div class="xfer-bar" id="xferBar" hidden>
+					<div class="xfer-bar-fill" id="xferBarFill"></div>
+				</div>
+			</div>
+			<div class="img-slot-ops img-multi-only" hidden>
+				<div class="img-slot-section img-slot-actions">
+					<div class="flex-container">
+						<div class="flex-group">
+							<button type="button" class="secondary" onclick="imgRefreshInfo()">刷新槽位</button>
+							<button type="button" class="secondary" onclick="imgShowSlot()">显示此槽</button>
+							<button type="button" class="secondary" onclick="imgReadSlot()">读取图片</button>
+							<button type="button" class="secondary" onclick="imgReadAllSlots()">读取全部</button>
+							<button type="button" class="secondary" onclick="imgShowToCanvas()">显示到画布</button>
+							<button type="button" class="secondary" onclick="imgDeleteSlot()">删除此槽</button>
+							<button type="button" class="secondary" onclick="imgClearAllSlots()">清空全部</button>
+						</div>
+					</div>
+					<div class="flex-container img-carousel-row">
+						<div class="flex-group img-carousel-interval">
+							<label for="imgCarouselVal">轮播间隔</label>
+							<input type="number" id="imgCarouselVal" min="0" max="240" value="0" class="img-carousel-input">
+							<label><input type="radio" name="imgCarUnit" value="min" checked onchange="imgCarouselUnitChanged()"> 分钟</label>
+							<label><input type="radio" name="imgCarUnit" value="hour" onchange="imgCarouselUnitChanged()"> 小时</label>
+							<span class="img-carousel-note">0=关，最低 5 分钟</span>
+						</div>
+						<div class="flex-group">
+							<label>轮播模式</label>
+							<label><input type="radio" name="imgCarMode" value="0" checked> 随机</label>
+							<label><input type="radio" name="imgCarMode" value="1"> 顺序</label>
+							<button type="button" class="primary" onclick="imgSetCarousel()">设置轮播</button>
+						</div>
+					</div>
+				</div>
 			</div>
 			<div class="flex-container">
 				<label class="file-btn primary" for="imageFile">
@@ -1633,12 +1657,6 @@ body.debug-mode .modal-foot {
 					<input type="number" id="mtusize" value="20" min="0" max="255">
 					<label for="interleavedcount">确认间隔:</label>
 					<input type="number" id="interleavedcount" value="50" min="0" max="500">
-				</div>
-			</div>
-			<div class="status-bar transfer-status">
-				<div class="transfer-status-row"><b>状态：</b><span id="status"></span></div>
-				<div class="xfer-bar" id="xferBar" hidden>
-					<div class="xfer-bar-fill" id="xferBarFill"></div>
 				</div>
 			</div>
 			<div class="flex-container">
@@ -3867,6 +3885,8 @@ let canvas, ctx, textDecoder;
 /* GATT value length (ATT_MTU-3). 0 = unknown — do not assume 244 (breaks Mac). */
 let negotiatedMaxDataLen = 0;
 let rleSupport = false;
+var gattWriteChain = Promise.resolve();
+let reconnecting = false;
 const isAppleWebBle = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent || '');
 let flashOpActive = false;
 let epdBusy = false;
@@ -4270,69 +4290,148 @@ async function write(cmd, data, withResponse = true) {
     addLog("服务不可用，请检查蓝牙连接");
     return false;
   }
-  let payload = [cmd];
-  if (data) {
-    if (typeof data == 'string') data = hex2bytes(data);
-    if (data instanceof Uint8Array) data = Array.from(data);
-    payload.push(...data)
-  }
-  /* Do not log every flash chunk — floods the UI and can drop the BLE link. */
-  if (cmd !== EpdCmd.FLASH_DATA) {
-    addLog(bytes2hex(payload), '⇑');
-  }
-  const writeTimeoutMs = (cmd === EpdCmd.FLASH_DATA)
-    ? (isAppleWebBle ? 12000 : 8000)
-    : 15000;
-  let timer = null;
-  try {
-    const writePromise = withResponse
-      ? epdCharacteristic.writeValueWithResponse(Uint8Array.from(payload))
-      : epdCharacteristic.writeValueWithoutResponse(Uint8Array.from(payload));
-    await Promise.race([
-      writePromise,
-      new Promise((_, reject) => {
-        timer = setTimeout(() => {
-          reject(new Error(`GATT write 超时 ${writeTimeoutMs}ms cmd=0x${cmd.toString(16)}`));
-        }, writeTimeoutMs);
-      }),
-    ]);
-  } catch (e) {
-    console.error(e);
-    if (e.message) addLog("write: " + e.message);
+  const run = async () => {
+    let payload = [cmd];
+    if (data) {
+      if (typeof data == 'string') data = hex2bytes(data);
+      if (data instanceof Uint8Array) data = Array.from(data);
+      payload.push(...data)
+    }
+    /* Do not log image/flash chunks — DOM hex dumps stall BLE writes. */
+    if (cmd !== EpdCmd.FLASH_DATA && cmd !== EpdCmd.WRITE_IMG) {
+      addLog(bytes2hex(payload), '⇑');
+    }
+    const writeTimeoutMs = (cmd === EpdCmd.FLASH_DATA)
+      ? (isAppleWebBle ? 12000 : 8000)
+      : 15000;
+    let timer = null;
+    try {
+      const writePromise = withResponse
+        ? epdCharacteristic.writeValueWithResponse(Uint8Array.from(payload))
+        : epdCharacteristic.writeValueWithoutResponse(Uint8Array.from(payload));
+      await Promise.race([
+        writePromise,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            reject(new Error(`GATT write 超时 ${writeTimeoutMs}ms cmd=0x${cmd.toString(16)}`));
+          }, writeTimeoutMs);
+        }),
+      ]);
+    } catch (e) {
+      console.error(e);
+      if (e.message) addLog("write: " + e.message);
+      return false;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+    return true;
+  };
+  const p = gattWriteChain.then(run, run);
+  gattWriteChain = p.then(() => undefined, () => undefined);
+  return p;
+}
+
+function attPayloadMtu() {
+  const mtuEl = document.getElementById('mtusize');
+  const inputMtu = parseInt(mtuEl && mtuEl.value, 10);
+  return Math.max(20, negotiatedMaxDataLen | 0, Number.isFinite(inputMtu) ? inputMtu : 0);
+}
+
+async function gattWriteBytes(bytes, withResponse) {
+  if (!epdCharacteristic) {
+    addLog("服务不可用，请检查蓝牙连接");
     return false;
-  } finally {
-    if (timer) clearTimeout(timer);
+  }
+  const run = async () => {
+    try {
+      if (withResponse) {
+        await epdCharacteristic.writeValueWithResponse(bytes);
+      } else {
+        await epdCharacteristic.writeValueWithoutResponse(bytes);
+      }
+      return true;
+    } catch (e) {
+      if (!withResponse) {
+        try {
+          await sleepMs(8);
+          await epdCharacteristic.writeValueWithoutResponse(bytes);
+          return true;
+        } catch (_) {
+          try {
+            await epdCharacteristic.writeValueWithResponse(bytes);
+            return true;
+          } catch (e2) {
+            console.error(e2);
+            if (e2.message) addLog("write: " + e2.message);
+            return false;
+          }
+        }
+      }
+      console.error(e);
+      if (e.message) addLog("write: " + e.message);
+      return false;
+    }
+  };
+  const p = gattWriteChain.then(run, run);
+  gattWriteChain = p.then(() => undefined, () => undefined);
+  return p;
+}
+
+function writeImageFlag(step, begin, useRle) {
+  /* Firmware hi-nibble: 0=begin, 1=begin+RLE, E=cont+RLE, F=cont; lo 0x0F=bw. */
+  const lo = (step === 'bw') ? 0x0F : 0x00;
+  const hi = useRle ? (begin ? 0x10 : 0xE0) : (begin ? 0x00 : 0xF0);
+  return hi | lo;
+}
+
+async function writeImage(data, step = 'bw') {
+  const mtu = attPayloadMtu();
+  const chunkSize = Math.max(1, mtu - 2);
+  const interleavedCount = parseInt(document.getElementById('interleavedcount').value, 10) || 50;
+  let noReplyCount = interleavedCount;
+  const stepText = step === 'bw' ? '黑白' : '颜色';
+  const rleChunks = rleSupport ? rleCompressMTU(data, chunkSize) : null;
+  const rleLength = rleChunks ? rleChunks.reduce((total, chunk) => total + chunk.length, 0) : data.length;
+  const useRle = rleSupport && rleLength < data.length;
+  const totalChunks = useRle ? rleChunks.length : Math.ceil(data.length / chunkSize);
+
+  for (let i = 0; i < totalChunks; i++) {
+    const raw = useRle ? rleChunks[i] : data.slice(i * chunkSize, i * chunkSize + chunkSize);
+    const chunk = raw instanceof Uint8Array ? raw : Uint8Array.from(raw);
+    if (i === 0 || i === totalChunks - 1 || (i % 8) === 0) {
+      const currentTime = (new Date().getTime() - startTime) / 1000.0;
+      setStatus(`${stepText}块: ${i + 1}/${totalChunks}${useRle ? ' RLE' : ''}, 总用时: ${currentTime}s`);
+    }
+    const pkt = new Uint8Array(2 + chunk.length);
+    pkt[0] = EpdCmd.WRITE_IMG;
+    pkt[1] = writeImageFlag(step, i === 0, useRle);
+    pkt.set(chunk, 2);
+    const needAck = (i === totalChunks - 1) || (noReplyCount <= 0);
+    if (!await gattWriteBytes(pkt, needAck)) return false;
+    if (needAck) {
+      noReplyCount = interleavedCount;
+    } else {
+      noReplyCount--;
+    }
   }
   return true;
 }
 
-async function writeImage(data, step = 'bw') {
-  const chunkSize = document.getElementById('mtusize').value - 2;
-  const interleavedCount = document.getElementById('interleavedcount').value;
-  const count = Math.round(data.length / chunkSize);
-  let chunkIdx = 0;
-  let noReplyCount = interleavedCount;
-
-  for (let i = 0; i < data.length; i += chunkSize) {
-    let currentTime = (new Date().getTime() - startTime) / 1000.0;
-    setStatus(`${step == 'bw' ? '黑白' : '颜色'}块: ${chunkIdx + 1}/${count + 1}, 总用时: ${currentTime}s`);
-    const payload = [
-      (step == 'bw' ? 0x0F : 0x00) | (i == 0 ? 0x00 : 0xF0),
-      ...data.slice(i, i + chunkSize),
-    ];
-    if (noReplyCount > 0) {
-      await write(EpdCmd.WRITE_IMG, payload, false);
-      noReplyCount--;
-    } else {
-      await write(EpdCmd.WRITE_IMG, payload, true);
-      noReplyCount = interleavedCount;
-    }
-    chunkIdx++;
+function setPinsPayload() {
+  let pins = document.getElementById("epdpins").value;
+  if (typeof pins === 'string') pins = hex2bytes(pins || '');
+  const bytes = Array.from(pins);
+  while (bytes.length < 8) bytes.push(0xFF);
+  const keyEl = document.getElementById("epdkeypin");
+  const key = keyEl ? parseInt(keyEl.value, 10) : NaN;
+  if (Number.isFinite(key) && key >= 0 && key <= 31) {
+    bytes.push(key & 0xFF);
   }
+  return bytes;
 }
 
 async function setDriver() {
-  await write(EpdCmd.SET_PINS, document.getElementById("epdpins").value);
+  await write(EpdCmd.SET_PINS, setPinsPayload());
   await write(EpdCmd.INIT, document.getElementById("epddriver").value);
   if (typeof imgRefreshInfo === 'function') {
     try { await imgRefreshInfo({ quiet: true }); } catch (_) {}
@@ -4414,6 +4513,10 @@ function imgMaskGet(slot) {
   const bi = slot >> 3;
   if (bi >= imgSlotMaskBytes.length) return false;
   return (imgSlotMaskBytes[bi] & (1 << (slot & 7))) !== 0;
+}
+
+function imgSlotNo(slot) {
+  return (slot | 0) + 1;
 }
 
 function imgMaskSet(slot, on) {
@@ -4657,7 +4760,7 @@ function imgUpdateSlotSelect() {
     btn.dataset.slot = String(i);
     btn.setAttribute('role', 'option');
     btn.setAttribute('aria-selected', i === imgSelectedSlotIdx ? 'true' : 'false');
-    btn.title = used ? `槽位 ${i}（有图）` : `槽位 ${i}（空）`;
+    btn.title = used ? `槽位 ${imgSlotNo(i)}（有图）` : `槽位 ${imgSlotNo(i)}（空）`;
     btn.onclick = () => imgSelectSlot(i);
 
     const thumb = document.createElement('canvas');
@@ -4670,7 +4773,7 @@ function imgUpdateSlotSelect() {
     meta.className = 'img-slot-meta';
     const label = document.createElement('span');
     label.className = 'img-slot-label';
-    label.textContent = `槽${i}`;
+    label.textContent = `槽${imgSlotNo(i)}`;
     const dot = document.createElement('span');
     dot.className = 'img-slot-dot' + (used ? ' is-filled' : '');
     dot.title = used ? '有图' : '空';
@@ -4792,9 +4895,9 @@ async function imgRefreshInfo(opts = null) {
 async function imgShowSlot() {
   if (!checkBluetoothConnection()) return;
   const slot = imgSelectedSlot();
-  setStatus(`显示槽位 ${slot}`);
-  showToast(`正在刷屏显示槽位 ${slot}…`, 'info', 3500);
-  setEpdBusy(true, `正在刷屏显示槽位 ${slot}（约 10–20 秒）…`);
+  setStatus(`显示槽位 ${imgSlotNo(slot)}`);
+  showToast(`正在刷屏显示槽位 ${imgSlotNo(slot)}…`, 'info', 3500);
+  setEpdBusy(true, `正在刷屏显示槽位 ${imgSlotNo(slot)}（约 10–20 秒）…`);
   const deadline = Date.now() + 120000;
   let attempt = 0;
   try {
@@ -4813,7 +4916,7 @@ async function imgShowSlot() {
       try {
         const msg = await p;
         if (msg === 'img=busy') {
-          setStatus(`显示槽位 ${slot}（设备忙，请稍候）`);
+          setStatus(`显示槽位 ${imgSlotNo(slot)}（设备忙，请稍候）`);
           showToast('屏幕刷新中，已排队等待…', 'warn', 2500);
           if (attempt === 1 || (attempt % 3) === 0) addLog('设备忙，等待屏幕空闲…');
           await sleepMs(800);
@@ -4821,7 +4924,7 @@ async function imgShowSlot() {
         }
         addLog(msg);
         if (msg === 'img=ok') {
-          setStatus(`槽位 ${slot} 已显示`);
+          setStatus(`槽位 ${imgSlotNo(slot)} 已显示`);
           showToast('屏幕刷新完成，可继续操作', 'ok');
         } else {
           setStatus(msg);
@@ -4847,8 +4950,8 @@ async function imgShowSlot() {
 async function imgDeleteSlot() {
   if (!checkBluetoothConnection()) return;
   const slot = imgSelectedSlot();
-  if (!await appConfirm(`确定删除槽位 ${slot} 的图片？此操作不可恢复。`, '删除图片')) return;
-  setStatus(`删除槽位 ${slot}…`);
+  if (!await appConfirm(`确定删除槽位 ${imgSlotNo(slot)} 的图片？此操作不可恢复。`, '删除图片')) return;
+  setStatus(`删除槽位 ${imgSlotNo(slot)}…`);
   const p = waitFlashNotify('img=', 30000, null, {
     match: (msg) => msg === 'img=del' || msg === 'img=err' || msg === 'img=busy',
   });
@@ -4862,7 +4965,7 @@ async function imgDeleteSlot() {
     imgMaskSet(slot, false);
     imgCollapseTrailingEmpty();
     await imgRefreshInfo({ keepSlot: slot, quiet: true });
-    setStatus(`槽位 ${slot} 已删除`);
+    setStatus(`槽位 ${imgSlotNo(slot)} 已删除`);
     imgUpdateSlotSelect();
   } catch (e) {
     setStatus('删除失败');
@@ -4883,12 +4986,12 @@ async function imgClearAllSlots() {
   setTransferProgress(0, '清空槽位…', { reset: true });
   for (const slot of used) {
     i++;
-    setTransferProgress((i / used.length) * 100, `清空槽位 ${slot} (${i}/${used.length})…`);
+    setTransferProgress((i / used.length) * 100, `清空槽位 ${imgSlotNo(slot)} (${i}/${used.length})…`);
     const p = waitFlashNotify('img=', 30000, null, {
       match: (msg) => msg === 'img=del' || msg === 'img=err' || msg === 'img=busy',
     });
     if (!await write(EpdCmd.IMG_DELETE, [slot], true)) {
-      addLog(`删除槽位 ${slot} 失败`);
+      addLog(`删除槽位 ${imgSlotNo(slot)} 失败`);
       break;
     }
     try {
@@ -4990,22 +5093,22 @@ function paintBwrToCanvas(payload, w, h) {
 }
 
 async function imgReadSlotPayload(slot, label) {
-  imgReadProgressLabel = label || `读取槽${slot}`;
+  imgReadProgressLabel = label || `读取槽${imgSlotNo(slot)}`;
   setTransferProgress(0, `${imgReadProgressLabel}…`, { reset: true });
   const startP = waitFlashNotify('imgr=start', 10000);
   if (!await write(EpdCmd.IMG_READ, [slot], true)) {
-    throw new Error(`槽${slot}：读取命令发送失败`);
+    throw new Error(`槽${imgSlotNo(slot)}：读取命令发送失败`);
   }
   const startMsg = await startP;
   const parts = startMsg.split(',');
   imgReadExpect = parseInt(parts[2], 10) || 0;
-  if (imgReadExpect <= 0) throw new Error(`槽${slot}：回读长度无效`);
+  if (imgReadExpect <= 0) throw new Error(`槽${imgSlotNo(slot)}：回读长度无效`);
   imgReadBuf = new Uint8Array(imgReadExpect);
   setTransferProgress(0, `${imgReadProgressLabel} 0/${imgReadExpect}`, { reset: true });
   const done = new Promise((resolve, reject) => {
     imgReadResolve = resolve;
     imgReadReject = reject;
-    setTimeout(() => reject(new Error(`槽${slot}：回读超时`)), 180000);
+    setTimeout(() => reject(new Error(`槽${imgSlotNo(slot)}：回读超时`)), 180000);
   });
   const okP = waitFlashNotify('imgr=ok', 180000, 'imgr=err');
   const payload = await Promise.race([done, okP.then(() => imgReadBuf)]);
@@ -5031,15 +5134,15 @@ async function imgReadSlot() {
   }
   const slot = imgSelectedSlot();
   if (!imgMaskGet(slot)) {
-    await appAlert(`槽位 ${slot} 为空，无法读取`, '读取图片');
+    await appAlert(`槽位 ${imgSlotNo(slot)} 为空，无法读取`, '读取图片');
     return;
   }
   imgReadBusy = true;
   try {
-    await imgReadSlotPayload(slot, `读取槽${slot}`);
-    addLog(`已读取槽位 ${slot} 到缩略图`);
-    setTransferProgress(100, `槽位 ${slot} 读取完成`);
-    setTimeout(() => clearTransferProgress(`槽位 ${slot} 已读取`), 1200);
+    await imgReadSlotPayload(slot, `读取槽${imgSlotNo(slot)}`);
+    addLog(`已读取槽位 ${imgSlotNo(slot)} 到缩略图`);
+    setTransferProgress(100, `槽位 ${imgSlotNo(slot)} 读取完成`);
+    setTimeout(() => clearTransferProgress(`槽位 ${imgSlotNo(slot)} 已读取`), 1200);
   } catch (e) {
     imgReadBuf = null;
     imgReadResolve = null;
@@ -5073,12 +5176,12 @@ async function imgReadAllSlots() {
       clearTransferProgress('已取消');
       return;
     }
-    addLog(`开始读取全部：${slots.length} 个槽位 [${slots.join(',')}]`);
+    addLog(`开始读取全部：${slots.length} 个槽位 [${slots.map(imgSlotNo).join(',')}]`);
     let doneCount = 0;
     for (const slot of slots) {
-      await imgReadSlotPayload(slot, `读取全部 ${doneCount + 1}/${slots.length} 槽${slot}`);
+      await imgReadSlotPayload(slot, `读取全部 ${doneCount + 1}/${slots.length} 槽${imgSlotNo(slot)}`);
       doneCount++;
-      addLog(`已读取槽位 ${slot} (${doneCount}/${slots.length})`);
+      addLog(`已读取槽位 ${imgSlotNo(slot)} (${doneCount}/${slots.length})`);
       await yieldUiPaint();
     }
     imgUpdateSlotSelect();
@@ -5184,11 +5287,11 @@ async function sendimgToSlotAndShow() {
   try {
     if (imgSlotCount <= 0) await imgRefreshInfo({ quiet: true });
     const slot = imgSelectedSlot();
-    setTransferProgress(0, `准备发送到槽位 ${slot}…`, { reset: true });
+    setTransferProgress(0, `准备发送到槽位 ${imgSlotNo(slot)}…`, { reset: true });
     const { payload, width, height } = await prepareCanvasBwr();
     const { blob, crc } = buildImgSlotBlob(payload, width, height);
-    addLog(`发送图片到槽位 ${slot}：${blob.length} 字节 (${width}x${height})`);
-    const done = await uploadFlashPayload(blob, blob.length, crc, EpdCmd.IMG_BEGIN, 'flash=ok', `图片槽${slot}`, [slot]);
+    addLog(`发送图片到槽位 ${imgSlotNo(slot)}：${blob.length} 字节 (${width}x${height})`);
+    const done = await uploadFlashPayload(blob, blob.length, crc, EpdCmd.IMG_BEGIN, 'flash=ok', `图片槽${imgSlotNo(slot)}`, [slot]);
     imgSelectedSlotIdx = slot;
     imgMaskSet(slot, true);
     imgSlotPayloadCache[slot] = new Uint8Array(payload);
@@ -5198,11 +5301,11 @@ async function sendimgToSlotAndShow() {
         await imgRefreshInfo({ keepSlot: slot, quiet: true, forceSlot: slot });
       } catch (_) {}
     }
-    const status = done && done.status ? done.status : `槽位 ${slot} 已保存`;
+    const status = done && done.status ? done.status : `槽位 ${imgSlotNo(slot)} 已保存`;
     setTransferProgress(100, `${status}，等待刷屏…`);
     setStatus(`${status}，正在刷屏显示…`);
     await imgShowSlot();
-    clearTransferProgress(`槽位 ${slot} 已显示`);
+    clearTransferProgress(`槽位 ${imgSlotNo(slot)} 已显示`);
   } catch (e) {
     if (String(e.message || e) === 'cancelled') return;
     clearTransferProgress('发送失败');
@@ -5616,6 +5719,7 @@ async function sendimg() {
 
   startTime = new Date().getTime();
   setTransferProgress(0, '准备发送到屏幕…', { reset: true });
+  await ensureFlashMtuReady(isAppleWebBle ? 10000 : 5000);
 
   let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   
@@ -5728,7 +5832,8 @@ function updateButtonStatus(forceDisabled = false) {
   const status = busy ? 'disabled' : (connected ? null : 'disabled');
   const cropBusy = (typeof isCropMode === 'function') && isCropMode();
   const sendDisabled = status || (cropBusy ? 'disabled' : null);
-  document.getElementById("reconnectbutton").disabled = (gattServer == null || gattServer.connected) ? 'disabled' : null;
+  const reconBtn = document.getElementById("reconnectbutton");
+  if (reconBtn) reconBtn.disabled = bleDevice ? false : true;
   document.getElementById("sendcmdbutton").disabled = status;
   document.getElementById("calendarmodebutton").disabled = status;
   document.getElementById("debugcalendarbutton").disabled = status;
@@ -5751,6 +5856,10 @@ function updateButtonStatus(forceDisabled = false) {
 }
 
 function disconnect() {
+  if (reconnecting) {
+    if (typeof updateButtonStatus === 'function') updateButtonStatus();
+    return;
+  }
   if (flashNotifyWait && flashNotifyWait.reject) {
     try { flashNotifyWait.reject(new Error('蓝牙已断开')); } catch (_) {}
     flashNotifyWait = null;
@@ -5801,11 +5910,28 @@ async function preConnect() {
 }
 
 async function reConnect() {
-  if (bleDevice != null && bleDevice.gatt.connected)
-    bleDevice.gatt.disconnect();
-  resetVariables();
+  if (!bleDevice) {
+    addLog("请先用「连接」选择设备");
+    return;
+  }
+  reconnecting = true;
+  try {
+    if (bleDevice.gatt && bleDevice.gatt.connected) {
+      bleDevice.gatt.disconnect();
+    }
+  } catch (_) {}
+  gattServer = null;
+  epdService = null;
+  epdCharacteristic = null;
+  rleSupport = false;
   addLog("正在重连");
-  setTimeout(async function () { await connect(); }, 300);
+  setTimeout(async function () {
+    try {
+      await connect();
+    } finally {
+      reconnecting = false;
+    }
+  }, 400);
 }
 
 function handleNotify(value, idx) {
@@ -5816,6 +5942,8 @@ function handleNotify(value, idx) {
     const epddriver = document.getElementById("epddriver");
     epdpins.value = bytes2hex(data.slice(0, 7));
     if (data.length > 10) epdpins.value += bytes2hex(data.slice(10, 11));
+    const keyEl = document.getElementById("epdkeypin");
+    if (keyEl && data.length > 8) keyEl.value = String(data[8]);
     epddriver.value = bytes2hex(data.slice(7, 8));
     updateDitcherOptions();
     updateDeviceControlVisibility();
