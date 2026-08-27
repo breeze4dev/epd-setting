@@ -200,9 +200,17 @@ h3 {
 
 .info-content {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 8px;
+}
+
+.info-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
 }
 
 .info-text {
@@ -1444,11 +1452,14 @@ body.debug-mode .modal-foot {
         <h3>墨水屏日历设置</h3>
 		<div class="info-notice">
 			<div class="info-content">
-				<span class="info-text">注意：本工具支持部分2.13寸、2.9寸及4.2寸三色阿里价签和4.2寸LG价签, 其他尺寸价签设置请访问原作者项目</span>
-				<a href="https://github.com/tsl0922/EPD-nRF5" class="info-link" target="_blank">Github</a>
-				<br>
-				<span class="info-text">使用方法: </span>
-				<a href="https://github.com/breeze4dev/epd-setting" class="info-link" target="_blank">https://github.com/breeze4dev/epd-setting</a>
+				<p class="info-row">
+					<span class="info-text">注意：本工具支持部分小屏幕价签，其他屏幕请访问原作者项目</span>
+					<a href="https://github.com/tsl0922/EPD-nRF5" class="info-link" target="_blank">Github</a>
+				</p>
+				<p class="info-row">
+					<span class="info-text">使用方法:</span>
+					<a href="https://github.com/breeze4dev/epd-setting" class="info-link" target="_blank">https://github.com/breeze4dev/epd-setting</a>
+				</p>
 			</div>
 		</div>
 		<h4></h4>
@@ -1463,15 +1474,12 @@ body.debug-mode .modal-foot {
 				<div class="flex-group debug">
 					<label for="epddriver">驱动</label>
 					<select id="epddriver" onchange="updateDitcherOptions(); updateDeviceControlVisibility();">
-						<option value="01" data-color="blackWhiteColor" data-size="4.2_400_300" data-size42="true">4.2寸 黑白 (UC8176)</option>
-						<option value="02" data-color="threeColor" data-size="4.2_400_300" data-size42="true">4.2寸 BWR (SSD1619)</option>
-						<option value="03" data-color="threeColor" data-size="4.2_400_300" data-size42="true">4.2寸 BWR (UC8176)</option>
 						<option value="06" data-color="threeColor" data-size="2.13_250_122">2.13寸 三色 (SSD16xx)</option>
-						<option value="08" data-color="threeColor" data-size="2.13_250_122" selected>2.13寸 三色 CE (SSD16xx)</option>
+						<option value="08" data-color="threeColor" data-size="2.13_250_122">2.13寸 三色 CE (SSD16xx)</option>
+						<option value="0a" data-color="blackWhiteColor" data-size="2.13_212_104">2.13寸 黑白 (SSD16xx)</option>
+						<option value="0b" data-color="blackWhiteColor" data-size="2.13_212_104" selected>2.13寸 黑白 CE (SSD16xx)</option>
 						<option value="07" data-color="threeColor" data-size="2.9_296_128">2.9寸 三色 (SSD16xx)</option>
 						<option value="09" data-color="threeColor" data-size="2.9_296_128">2.9寸 三色 CE (SSD16xx)</option>
-						<option value="0a" data-color="blackWhiteColor" data-size="2.13_212_104">2.13寸 黑白 (SSD16xx)</option>
-						<option value="0b" data-color="blackWhiteColor" data-size="2.13_212_104">2.13寸 黑白 CE (SSD16xx)</option>
 					</select>
 					<label for="epdpins">引脚</label>
 					<input id="epdpins" type="text" value="">
@@ -1613,12 +1621,9 @@ body.debug-mode .modal-foot {
 				<div class="flex-group debug">
 					<label for="canvasSize">画布尺寸:</label>
 					<select id="canvasSize" onchange="updateCanvasSize()">
-						<option value="4.2_400_300">4.2 (400x300)</option>
-						<option value="2.13_212_104">2.13 (212x104)</option>
+						<option value="2.13_212_104" selected>2.13 (212x104)</option>
 						<option value="2.13_250_122">2.13 (250x122)</option>
-						<option value="2.9_296_128" selected>2.9 (296x128)</option>
-						<option value="5.79_792_272">5.79 (792x272)</option>
-						<option value="5.83_600_448">5.83 (600x448)</option>
+						<option value="2.9_296_128">2.9 (296x128)</option>
 					</select>
 				</div>
 				<div class="flex-group debug">
@@ -1670,7 +1675,7 @@ body.debug-mode .modal-foot {
 			</div>
 			<div class="canvas-container">
 				<div class="canvas-title"></div>
-				<canvas id="canvas" width="250" height="122"></canvas>
+				<canvas id="canvas" width="296" height="128"></canvas>
 				<div class="flex-container canvas-tools">
 					<div class="flex-group tool-buttons">
 						<button id="brush-mode" title="画笔" class="tool-button">✏️</button>
@@ -3877,7 +3882,10 @@ let bleDevice, gattServer;
 let epdService, epdCharacteristic;
 let startTime, msgIndex, appVersion;
 let firmwareVersion = null;  // FW_BUILD (feature gate), not semver major
-let firmwareVersionLabel = null; // e.g. "2.0.0+63" for UI
+let firmwareVersionLabel = null; // e.g. "v2.0.0(b65)"
+let firmwareVariant = null; // fwid: epd213 / epd290 / epd213bw / ...
+let imgSlotRefreshTimer = null;
+let epdInitDone = false;
 /* Host treats build >=60 (0x3C) as multi-image capable. */
 const FW_IMG_MULTI_MIN = 0x3C;
 let imgMultiSupported = false;
@@ -3890,6 +3898,7 @@ let reconnecting = false;
 const isAppleWebBle = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent || '');
 let flashOpActive = false;
 let epdBusy = false;
+let epdBusyTimer = null;
 let appModalResolver = null;
 
 // Device information
@@ -3905,20 +3914,106 @@ let debugCalendarSelectedDate = new Date();
 
 /** Parse device payload: "MAJOR.MINOR.PATCH+BUILD" or legacy plain integer. */
 function parseFirmwareVersionPayload(raw) {
-  const s = String(raw || '').trim();
+  const s = String(raw || '').trim().split(/[\s,]/)[0];
   if (!s) return null;
   const plus = s.lastIndexOf('+');
   if (plus >= 0) {
     const build = parseInt(s.substring(plus + 1), 10);
-    if (Number.isFinite(build)) {
-      return { label: s, build };
+    const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(s.substring(0, plus));
+    if (Number.isFinite(build) && m) {
+      return { label: `v${m[1]}.${m[2]}.${m[3]}(b${build})`, build };
     }
   }
+  /* "2.0.0" must not become build=2 (parseInt). */
+  if (s.indexOf('.') >= 0) return null;
   const n = parseInt(s, 10);
   if (Number.isFinite(n)) {
-    return { label: s, build: n };
+    return { label: `v2.0.0(b${n})`, build: n };
   }
   return null;
+}
+
+function parseFwidValue(msg) {
+  const s = String(msg || '');
+  const i = s.indexOf('fwid=');
+  if (i < 0) return '';
+  return s.substring(i + 5).trim().split(/[\s,]/)[0] || '';
+}
+
+function isSmallCarouselFwid(id) {
+  return id === 'epd213' || id === 'epd290' || id === 'epd213bw';
+}
+
+function imgSlotPlanes() {
+  if (firmwareVariant === 'epd213bw') return 1;
+  if (firmwareVariant === 'epd213' || firmwareVariant === 'epd290') return 2;
+  const id = deviceInfo && deviceInfo.modelId;
+  if (id === 10 || id === 11) return 1;
+  const drv = document.getElementById('epddriver');
+  const v = drv && String(drv.value).toLowerCase();
+  if (v === '0a' || v === '0b') return 1;
+  return 2;
+}
+
+function imgDefaultPanel() {
+  if (firmwareVariant === 'epd213bw') return { w: 104, h: 212 };
+  if (firmwareVariant === 'epd290') return { w: 128, h: 296 };
+  return { w: 122, h: 250 };
+}
+
+function looksLikeEpdTextNotify(data) {
+  if (!data || data.length < 2) return false;
+  const n = Math.min(24, data.length);
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    const c = data[i];
+    if (c < 32 || c > 126) return false;
+    s += String.fromCharCode(c);
+  }
+  return /^(device=|fwid=|fwver=|firmware_version=|mtu=|t=|led=|img=|imgr=|flash=)/.test(s);
+}
+
+function scheduleImgSlotRefresh(delayMs) {
+  if (imgSlotRefreshTimer) clearTimeout(imgSlotRefreshTimer);
+  imgSlotRefreshTimer = setTimeout(async () => {
+    imgSlotRefreshTimer = null;
+    if (!bleDevice || !bleDevice.gatt || !bleDevice.gatt.connected) return;
+    if (!epdInitDone) return;
+    if (!imgMultiSupported && firmwareVariant && !isSmallCarouselFwid(firmwareVariant)) return;
+    try {
+      if (typeof imgRefreshInfo === 'function') await imgRefreshInfo({ quiet: true });
+    } catch (_) { /* old firmware: no img= reply */ }
+  }, delayMs == null ? 700 : delayMs);
+}
+
+function noteImgMultiFromFwid(id) {
+  if (!isSmallCarouselFwid(id)) return;
+  firmwareVariant = id;
+  if (!imgMultiSupported) {
+    setImgMultiUiVisible(true);
+    addLog(`img slots: on (${id})`);
+  }
+  scheduleImgSlotRefresh(700);
+}
+
+function updateFirmwareVersionLog(versionText) {
+  if (!versionText) return;
+  const logElement = document.getElementById('log');
+  if (!logElement) {
+    addLog(`固件版本: ${versionText}`);
+    return;
+  }
+  for (const node of logElement.childNodes) {
+    if (!node || !node.textContent || node.textContent.indexOf('固件版本:') < 0) continue;
+    for (let i = node.childNodes.length - 1; i >= 0; i--) {
+      const n = node.childNodes[i];
+      if (n.nodeType === 3 && n.textContent.indexOf('固件版本:') >= 0) {
+        n.textContent = `固件版本: ${versionText}`;
+        return;
+      }
+    }
+  }
+  addLog(`固件版本: ${versionText}`);
 }
 
 function setImgMultiUiVisible(on) {
@@ -3946,11 +4041,12 @@ function setImgMultiUiVisible(on) {
 
 function noteImgMultiFromFirmwareVersion(ver) {
   if (ver == null || !Number.isFinite(ver)) return;
-  if (ver >= FW_IMG_MULTI_MIN) {
+  if (ver >= FW_IMG_MULTI_MIN || isSmallCarouselFwid(firmwareVariant)) {
     if (!imgMultiSupported) {
       setImgMultiUiVisible(true);
       addLog(`img slots: on (build ${ver})`);
     }
+    scheduleImgSlotRefresh(700);
   } else if (!imgMultiSupported) {
     setImgMultiUiVisible(false);
     addLog(`img slots: off (build ${ver})`);
@@ -4007,6 +4103,24 @@ function initAppModal() {
   });
 }
 
+function epdIsBwPanel() {
+  if (firmwareVariant === 'epd213bw') return true;
+  const id = deviceInfo && deviceInfo.modelId;
+  if (id === 10 || id === 11) return true;
+  const drv = document.getElementById('epddriver');
+  const v = drv && String(drv.value).toLowerCase();
+  return v === '0a' || v === '0b';
+}
+
+function epdRefreshGuardMs() {
+  return epdIsBwPanel() ? 1000 : 15000;
+}
+
+function epdRefreshBusyHint(prefix) {
+  const wait = epdIsBwPanel() ? '约 1 秒' : '约 10–15 秒';
+  return (prefix || '墨水屏刷新中') + '（' + wait + '）…';
+}
+
 function showToast(/* message, type, ms */) {
   /* Disabled: toast was too noisy; status/busy bar remain. */
 }
@@ -4019,7 +4133,7 @@ function updateDeviceBusyUi(reason) {
     bar.hidden = false;
     if (text) {
       if (flashOpActive) text.textContent = reason || 'Flash 传输中，请稍候…';
-      else text.textContent = reason || '墨水屏刷新中（约 10–20 秒），请稍候…';
+      else text.textContent = reason || epdRefreshBusyHint();
     }
   } else {
     bar.hidden = true;
@@ -4027,9 +4141,21 @@ function updateDeviceBusyUi(reason) {
 }
 
 function setEpdBusy(on, reason) {
+  if (epdBusyTimer) {
+    clearTimeout(epdBusyTimer);
+    epdBusyTimer = null;
+  }
   epdBusy = !!on;
   updateDeviceBusyUi(reason);
   if (typeof updateButtonStatus === 'function') updateButtonStatus();
+}
+
+function setEpdBusyForRefresh(reason) {
+  setEpdBusy(true, reason || epdRefreshBusyHint());
+  epdBusyTimer = setTimeout(() => {
+    epdBusyTimer = null;
+    setEpdBusy(false);
+  }, epdRefreshGuardMs());
 }
 
 function setFlashBusy(on, reason) {
@@ -4228,26 +4354,9 @@ async function syncCustomDate() {
 }
 
 const canvasSizes = [
-  // { name: '1.54_152_152', width: 152, height: 152 },
-  // { name: '1.54_200_200', width: 200, height: 200 },
-  // { name: '2.13_212_104', width: 212, height: 104 },
+  { name: '2.13_212_104', width: 212, height: 104 },
   { name: '2.13_250_122', width: 250, height: 122 },
-  // { name: '2.13_250_134', width: 250, height: 134 },
-  // { name: '2.66_296_152', width: 296, height: 152 },
   { name: '2.9_296_128', width: 296, height: 128 },
-  { name: '4.2_400_300', width: 400, height: 300 },
-  // { name: '2.9_384_168', width: 384, height: 168 },
-  // { name: '3.5_384_184', width: 384, height: 184 },
-  // { name: '3.7_416_240', width: 416, height: 240 },
-  // { name: '3.97_800_480', width: 800, height: 480 },
-  // { name: '4.2_400_300', width: 400, height: 300 },
-  // { name: '5.79_792_272', width: 792, height: 272 },
-  // { name: '7.5_800_480', width: 800, height: 480 },
-  // { name: '10.2_960_640', width: 960, height: 640 },
-  // { name: '10.85_1360_480', width: 1360, height: 480 },
-  // { name: '11.6_960_640', width: 960, height: 640 },
-  // { name: '4E_600_400', width: 600, height: 400 },
-  // { name: '7.3E6', width: 480, height: 800 }
 ];
 
 function hex2bytes(hex) {
@@ -4275,6 +4384,12 @@ function resetVariables() {
   msgIndex = 0;
   firmwareVersion = null;
   firmwareVersionLabel = null;
+  firmwareVariant = null;
+  epdInitDone = false;
+  if (imgSlotRefreshTimer) {
+    clearTimeout(imgSlotRefreshTimer);
+    imgSlotRefreshTimer = null;
+  }
   imgMultiSupported = false;
   negotiatedMaxDataLen = 0;
   rleSupport = false;
@@ -4406,7 +4521,8 @@ async function writeImage(data, step = 'bw') {
     pkt[0] = EpdCmd.WRITE_IMG;
     pkt[1] = writeImageFlag(step, i === 0, useRle);
     pkt.set(chunk, 2);
-    const needAck = (i === totalChunks - 1) || (noReplyCount <= 0);
+    /* First chunk (begin) must ACK: firmware may hardware-reset the panel after sleep. */
+    const needAck = (i === 0) || (i === totalChunks - 1) || (noReplyCount <= 0);
     if (!await gattWriteBytes(pkt, needAck)) return false;
     if (needAck) {
       noReplyCount = interleavedCount;
@@ -4622,16 +4738,18 @@ function resetImgSlotUi() {
   clearTransferProgress('未连接');
 }
 
-function imgComputeStride(width, height) {
+function imgComputeStride(width, height, planes) {
+  const p = planes == null ? imgSlotPlanes() : planes;
   const plane = Math.ceil(width / 8) * height;
-  const raw = 16 + plane * 2;
+  const raw = 16 + plane * p;
   return Math.ceil(raw / 4096) * 4096;
 }
 
 function imgEffectiveStride() {
   if (imgSlotStride > 0) return imgSlotStride;
-  const w = deviceInfo.width || 122;
-  const h = deviceInfo.height || 250;
+  const def = imgDefaultPanel();
+  const w = deviceInfo.width || def.w;
+  const h = deviceInfo.height || def.h;
   return imgComputeStride(w, h);
 }
 
@@ -4687,7 +4805,8 @@ function imgClearSlotThumb(canvasEl) {
 
 function paintBwrPayload(payload, w, h, targetCanvas) {
   const plane = Math.ceil(w / 8) * h;
-  if (!targetCanvas || !payload || payload.length < plane * 2) return false;
+  const planes = (payload && payload.length >= plane * 2) ? 2 : 1;
+  if (!targetCanvas || !payload || payload.length < plane * planes) return false;
   const tctx = targetCanvas.getContext('2d');
   if (!tctx) return false;
   const portrait = (w < h);
@@ -4697,14 +4816,14 @@ function paintBwrPayload(payload, w, h, targetCanvas) {
   targetCanvas.height = ch;
   const img = tctx.createImageData(cw, ch);
   const bw = payload.subarray(0, plane);
-  const rw = payload.subarray(plane, plane * 2);
+  const rw = (planes >= 2) ? payload.subarray(plane, plane * 2) : null;
   const wb = Math.ceil(w / 8);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const bi = y * wb + (x >> 3);
       const bit = 0x80 >> (x & 7);
       const black = (bw[bi] & bit) === 0;
-      const red = (rw[bi] & bit) === 0;
+      const red = rw ? ((rw[bi] & bit) === 0) : false;
       let dx = x, dy = y;
       if (portrait) {
         dx = h - 1 - y;
@@ -4785,8 +4904,9 @@ function imgUpdateSlotSelect() {
 
     const cached = imgSlotPayloadCache[i];
     if (cached) {
-      const w = deviceInfo.width || 122;
-      const h = deviceInfo.height || 250;
+      const def = imgDefaultPanel();
+      const w = deviceInfo.width || def.w;
+      const h = deviceInfo.height || def.h;
       paintBwrPayload(cached, w, h, thumb);
     } else {
       imgClearSlotThumb(thumb);
@@ -4855,7 +4975,7 @@ async function imgRefreshInfo(opts = null) {
   const quiet = !!(opts && opts.quiet);
   const forceSlot = (opts && opts.forceSlot != null) ? opts.forceSlot : -1;
   if (!quiet) setStatus('刷新槽位状态…');
-  const p = waitFlashNotify('img=', quiet ? 2500 : 12000, null, {
+  const p = waitFlashNotify('img=', quiet ? 8000 : 12000, null, {
     match: (msg) => /^img=\d+,/.test(msg),
     ignore: (msg) =>
       msg === 'img=ok' || msg === 'img=busy' || msg === 'img=err' ||
@@ -4897,7 +5017,7 @@ async function imgShowSlot() {
   const slot = imgSelectedSlot();
   setStatus(`显示槽位 ${imgSlotNo(slot)}`);
   showToast(`正在刷屏显示槽位 ${imgSlotNo(slot)}…`, 'info', 3500);
-  setEpdBusy(true, `正在刷屏显示槽位 ${imgSlotNo(slot)}（约 10–20 秒）…`);
+  setEpdBusy(true, epdRefreshBusyHint(`正在刷屏显示槽位 ${imgSlotNo(slot)}`));
   const deadline = Date.now() + 120000;
   let attempt = 0;
   try {
@@ -5046,8 +5166,7 @@ async function imgSetCarousel() {
     if (mins !== 0) {
       /* Device also switches mode; sync host-side SET_TIME for consistency. */
       await syncTime(0);
-      setEpdBusy(true, '已切图片模式，正在刷屏…');
-      setTimeout(() => setEpdBusy(false), 20000);
+      setEpdBusyForRefresh(epdRefreshBusyHint('已切图片模式，正在刷屏'));
       await appAlert(
         `轮播已设为 ${mins} 分钟，${modeText}播放\n已自动切换到图片模式`,
         '设置成功'
@@ -5116,8 +5235,9 @@ async function imgReadSlotPayload(slot, label) {
   const copy = new Uint8Array(payload);
   imgSlotPayloadCache[slot] = copy;
   imgMaskSet(slot, true);
-  const w = deviceInfo.width || 122;
-  const h = deviceInfo.height || 250;
+  const def = imgDefaultPanel();
+  const w = deviceInfo.width || def.w;
+  const h = deviceInfo.height || def.h;
   const thumb = document.querySelector(`.img-slot[data-slot="${slot}"] .img-slot-thumb`);
   if (thumb) paintBwrPayload(copy, w, h, thumb);
   imgReadBuf = null;
@@ -5207,8 +5327,9 @@ async function imgShowToCanvas() {
     await appAlert('请先「读取图片」到当前槽位缩略图，再显示到画布', '显示到画布');
     return;
   }
-  const w = deviceInfo.width || 122;
-  const h = deviceInfo.height || 250;
+  const def = imgDefaultPanel();
+  const w = deviceInfo.width || def.w;
+  const h = deviceInfo.height || def.h;
   paintBwrToCanvas(payload, w, h);
 }
 
@@ -5225,8 +5346,9 @@ function crc32Uint8(buf) {
 
 function buildImgSlotBlob(bwrPayload, width, height) {
   const plane = Math.ceil(width / 8) * height;
-  if (bwrPayload.length !== plane * 2) {
-    throw new Error(`payload ${bwrPayload.length} != ${plane * 2}`);
+  const planes = imgSlotPlanes();
+  if (bwrPayload.length !== plane * planes) {
+    throw new Error(`payload ${bwrPayload.length} != ${plane * planes}`);
   }
   const hdr = new Uint8Array(16);
   hdr[0] = 0x49; hdr[1] = 0x4D; hdr[2] = 0x41; hdr[3] = 0x47;
@@ -5239,7 +5361,7 @@ function buildImgSlotBlob(bwrPayload, width, height) {
   hdr[9] = (width >>> 8) & 0xff;
   hdr[10] = height & 0xff;
   hdr[11] = (height >>> 8) & 0xff;
-  hdr[12] = 2;
+  hdr[12] = planes;
   const stride = imgEffectiveStride();
   const need = 16 + bwrPayload.length;
   if (stride < need) throw new Error(`stride ${stride} < blob ${need}`);
@@ -5254,7 +5376,12 @@ async function prepareCanvasBwr() {
   if (!canvas || !ctx) throw new Error('画布未初始化');
   if (isCropMode()) throw new Error('请先完成图片裁剪后再发送');
   const ditherMode = document.getElementById('ditherMode').value;
-  if (ditherMode !== 'threeColor') {
+  const planes = imgSlotPlanes();
+  if (planes === 1) {
+    if (ditherMode !== 'blackWhiteColor' && ditherMode !== 'threeColor') {
+      throw new Error('2.13黑白槽位请使用双色(黑白)模式');
+    }
+  } else if (ditherMode !== 'threeColor') {
     throw new Error('存槽位请使用三色(黑白红)模式');
   }
   let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -5270,7 +5397,10 @@ async function prepareCanvasBwr() {
     imageData = rotateImageDataCounterclockwise(imageData);
     addLog(`检测到横屏画布，已旋转为竖屏 ${imageData.width}x${imageData.height}`);
   }
-  const processed = processImageData(imageData, ditherMode);
+  let processed = processImageData(imageData, ditherMode);
+  if (planes === 1 && ditherMode === 'threeColor') {
+    processed = processed.subarray(0, Math.floor(processed.length / 2));
+  }
   return { payload: processed, width: imageData.width, height: imageData.height };
 }
 
@@ -5625,8 +5755,7 @@ async function syncTime(mode) {
     if (mode === 0) {
       addLog('已切换图片模式（不会自动刷屏；请点「显示此槽」）');
     } else {
-      setEpdBusy(true, '墨水屏刷新中，请稍候…');
-      setTimeout(() => setEpdBusy(false), 18000);
+      setEpdBusyForRefresh();
     }
   }
 }
@@ -5639,7 +5768,7 @@ async function enterPictureMode() {
   }
   if (imgSlotCount > 0 && imgMaskUsedSlots().length > 0) {
     const go = await appConfirm(
-      '切换到图片模式并显示当前选中槽位？\n（刷屏约需 10–20 秒）',
+      '切换到图片模式并显示当前选中槽位？',
       '图片模式'
     );
     if (!go) return;
@@ -5656,10 +5785,7 @@ async function clearScreen() {
   await write(EpdCmd.CLEAR);
   addLog("清屏指令已发送！");
   addLog("屏幕刷新完成前请不要操作。");
-  setEpdBusy(true, '清屏刷新中…');
-  setTimeout(() => {
-    setEpdBusy(false);
-  }, 18000);
+  setEpdBusyForRefresh(epdRefreshBusyHint('清屏刷新中'));
 }
 
 async function sendcmd() {
@@ -5747,18 +5873,26 @@ async function sendimg() {
 
   updateButtonStatus(true);
 
+  let sent = false;
   if (ditherMode === 'fourColor') {
-    await writeImage(processedData, 'color');
+    sent = await writeImage(processedData, 'color');
   } else if (ditherMode === 'threeColor') {
     const halfLength = Math.floor(processedData.length / 2);
-    await writeImage(processedData.slice(0, halfLength), 'bw');
-    await writeImage(processedData.slice(halfLength), 'red');
+    sent = await writeImage(processedData.slice(0, halfLength), 'bw');
+    if (sent) sent = await writeImage(processedData.slice(halfLength), 'red');
   } else if (ditherMode === 'blackWhiteColor') {
-    await writeImage(processedData, 'bw');
+    sent = await writeImage(processedData, 'bw');
   } else {
     addLog("当前固件不支持此颜色模式。");
     updateButtonStatus();
     clearTransferProgress('模式不支持');
+    return;
+  }
+
+  if (!sent) {
+    updateButtonStatus();
+    clearTransferProgress('发送失败');
+    addLog('直写屏幕失败：蓝牙写入中断。槽位显示后请稍候再试，或重连后重试。');
     return;
   }
 
@@ -5769,11 +5903,8 @@ async function sendimg() {
   addLog(`发送完成！耗时: ${sendTime}s`);
   setTransferProgress(100, `发送完成！耗时: ${sendTime}s`);
   addLog("屏幕刷新完成前请不要操作。");
-  setEpdBusy(true, '墨水屏刷新中，请稍候…');
-  setTimeout(() => {
-    setEpdBusy(false);
-    clearTransferProgress('空闲');
-  }, 18000);
+  setEpdBusyForRefresh();
+  setTimeout(() => clearTransferProgress('空闲'), epdRefreshGuardMs());
 }
 
 async function downloadDataArray() {
@@ -5936,7 +6067,7 @@ async function reConnect() {
 
 function handleNotify(value, idx) {
   const data = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
-  if (idx == 0) {
+  if (idx == 0 && !looksLikeEpdTextNotify(data)) {
     addLog(`收到配置：${bytes2hex(data)}`);
     const epdpins = document.getElementById("epdpins");
     const epddriver = document.getElementById("epddriver");
@@ -5962,6 +6093,25 @@ function handleNotify(value, idx) {
     if (msg.startsWith('flash=') || msg.startsWith('img=') || msg.startsWith('imgr=')) {
       onFlashNotify(msg);
     }
+    if (msg.indexOf('fwid=') >= 0) {
+      const id = parseFwidValue(msg);
+      if (id && firmwareVariant !== id) addLog(`固件标识: ${id}`);
+      if (id) noteImgMultiFromFwid(id);
+    }
+    if (msg.indexOf('fwver=') >= 0) {
+      const m = /fwver\s*=\s*(\d+)\.(\d+)\.(\d+)(?:\s*,\s*(\d+))?/.exec(msg);
+      if (m) {
+        const build = m[4] != null ? parseInt(m[4], 10) : null;
+        firmwareVersionLabel = Number.isFinite(build)
+          ? `v${m[1]}.${m[2]}.${m[3]}(b${build})`
+          : `v${m[1]}.${m[2]}.${m[3]}`;
+        if (Number.isFinite(build)) {
+          firmwareVersion = build;
+          noteImgMultiFromFirmwareVersion(firmwareVersion);
+        }
+        updateFirmwareVersionLog(firmwareVersionLabel);
+      }
+    }
     if (/^img=\d+,/.test(msg) && !flashOpActive) {
       applyImgInfoNotify(msg);
     }
@@ -5983,16 +6133,16 @@ function handleNotify(value, idx) {
       addLog(`远端时间: ${new Date(t * 1000).toLocaleString()}`);
       addLog(`本地时间: ${new Date().toLocaleString()}`);
     } else if (msg.startsWith('device=') && msg.length > 7) {
-      // Parse device information: device=modelId,width,height
-      const deviceStr = msg.substring(7);
-      const parts = deviceStr.split(',');
-      if (parts.length >= 3) {
-        deviceInfo.modelId = parseInt(parts[0]);
-        deviceInfo.width = parseInt(parts[1]);
-        deviceInfo.height = parseInt(parts[2]);
+      const m = /^device=\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(msg);
+      if (m) {
+        deviceInfo.modelId = parseInt(m[1], 10);
+        deviceInfo.width = parseInt(m[2], 10);
+        deviceInfo.height = parseInt(m[3], 10);
         addLog(`设备信息: 型号=${deviceInfo.modelId}, 尺寸=${deviceInfo.width}x${deviceInfo.height}`);
         updateUIForDevice();
-        if (!flashOpActive) imgRefreshInfo().catch(() => {});
+        if (isSmallCarouselFwid(firmwareVariant) || (firmwareVersion != null && firmwareVersion >= FW_IMG_MULTI_MIN)) {
+          scheduleImgSlotRefresh(700);
+        }
       }
     } else if (msg.startsWith('led=') && msg.length > 4) {
       const mode = msg.substring(4);
@@ -6063,33 +6213,13 @@ function handleNotify(value, idx) {
       addLog(`温度校准偏移量: ${offsetText}℃`);
     } else if (msg.startsWith('firmware_version=') && msg.length > 17) {
       const parsed = parseFirmwareVersionPayload(msg.substring(17));
-      if (parsed) {
+      if (parsed && parsed.build != null) {
         firmwareVersion = parsed.build;
-        firmwareVersionLabel = parsed.label;
+        if (!firmwareVersionLabel) firmwareVersionLabel = parsed.label;
         noteImgMultiFromFirmwareVersion(firmwareVersion);
       }
-      const versionText = firmwareVersionLabel
-        ? (appVersion != null
-            ? `0x${Number(appVersion).toString(16)} / ${firmwareVersionLabel}`
-            : firmwareVersionLabel)
-        : (firmwareVersion != null
-            ? `0x${appVersion.toString(16)}-${firmwareVersion.toString(16).padStart(2, '0').toUpperCase()}`
-            : `0x${appVersion.toString(16)}`);
-      // Update the version log entry by replacing the previous version line
-      const logElement = document.getElementById("log");
-      if (logElement && logElement.value) {
-        const logValue = logElement.value;
-        const versionLineIndex = logValue.indexOf('固件版本:');
-        if (versionLineIndex !== -1) {
-          const beforeVersion = logValue.substring(0, versionLineIndex);
-          const afterVersion = logValue.substring(versionLineIndex);
-          const lineEnd = afterVersion.indexOf('\n');
-          const rest = lineEnd !== -1 ? afterVersion.substring(lineEnd + 1) : '';
-          logElement.value = beforeVersion + `固件版本: ${versionText}\n` + rest;
-        } else {
-          addLog(`固件版本: ${versionText}`);
-        }
-      }
+      const versionText = firmwareVersionLabel || (firmwareVersion != null ? `v2.0.0(b${firmwareVersion})` : '');
+      updateFirmwareVersionLog(versionText);
     }
   }
 }
@@ -6319,34 +6449,24 @@ async function connect() {
   }
 
   try {
-    await epdCharacteristic.startNotifications();
+    /* Listen before CCCD enable so the first notifies are not dropped. */
     epdCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
       handleNotify(event.target.value, msgIndex++);
     });
+    await epdCharacteristic.startNotifications();
   } catch (e) {
     console.error(e);
     if (e.message) addLog("startNotifications: " + e.message);
   }
 
   await write(EpdCmd.INIT);
+  epdInitDone = true;
 
   document.getElementById("connectbutton").innerHTML = '断开';
   updateButtonStatus();
-  setImgMultiUiVisible(false);
-  /* Capability: firmware_version>=0x3C, or IMG_INFO reply enables multi UI. */
-  setTimeout(async () => {
-    if (firmwareVersion != null) noteImgMultiFromFirmwareVersion(firmwareVersion);
-    if (imgMultiSupported || firmwareVersion == null) {
-      try {
-        if (typeof imgRefreshInfo === 'function' && bleDevice && bleDevice.gatt.connected) {
-          await imgRefreshInfo({ quiet: true });
-        }
-      } catch (_) { /* old firmware: no img= reply */ }
-    }
-    if (!imgMultiSupported && firmwareVersion != null && firmwareVersion < FW_IMG_MULTI_MIN) {
-      addLog(`img slots: off (build ${firmwareVersion})`);
-    }
-  }, 800);
+  if (firmwareVersion != null) noteImgMultiFromFirmwareVersion(firmwareVersion);
+  if (isSmallCarouselFwid(firmwareVariant)) noteImgMultiFromFwid(firmwareVariant);
+  scheduleImgSlotRefresh(800);
 }
 
 function setStatus(statusText) {
@@ -6736,9 +6856,10 @@ function autoRotateCanvasIfNeeded(sizeName) {
   }
   
   // Check if this is a landscape screen that needs rotation
-  const needsRotation = sizeName.includes('2.13_250_122') || 
-                       sizeName.includes('2.13_250_134') || 
-                       sizeName.includes('2.9_296_128') || 
+  const needsRotation = sizeName.includes('2.13_212_104') ||
+                       sizeName.includes('2.13_250_122') ||
+                       sizeName.includes('2.13_250_134') ||
+                       sizeName.includes('2.9_296_128') ||
                        sizeName.includes('2.66_296_152');
   
   if (needsRotation) {
