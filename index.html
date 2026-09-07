@@ -4572,9 +4572,18 @@ function flashChunkSizeFromMtu(maxDataLen) {
 }
 
 async function ensureFlashMtuReady(timeoutMs = 8000) {
+  if (negotiatedMaxDataLen > 20) {
+    return negotiatedMaxDataLen;
+  }
+  /* GATT MTU is already exchanged on connect. Ask the firmware to report it
+   * (INIT used to skip mtu= before activation). Do not sit on 20. */
+  const driver = document.getElementById('epddriver');
+  await write(EpdCmd.INIT, driver ? driver.value : null, true);
+
   const t0 = Date.now();
-  while (negotiatedMaxDataLen < 20) {
-    if (Date.now() - t0 > timeoutMs) break;
+  const waitMs = Math.max(timeoutMs, isAppleWebBle ? 10000 : 5000);
+  while (Date.now() - t0 < waitMs) {
+    if (negotiatedMaxDataLen > 20) break;
     await sleepMs(50);
   }
   if (negotiatedMaxDataLen < 20) {
