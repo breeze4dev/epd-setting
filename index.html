@@ -6031,7 +6031,7 @@ async function preConnect() {
     resetVariables();
     try {
       bleDevice = await navigator.bluetooth.requestDevice({
-        filters: [{ namePrefix: 'NRF' }],
+        filters: [{ namePrefix: 'NRF_EPD' }, { namePrefix: 'nrf_epd' }],
         optionalServices: ['62750001-d828-918d-fb46-b6c11c675aec']
       });
     } catch (e) {
