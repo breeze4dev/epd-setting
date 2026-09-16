@@ -1597,10 +1597,10 @@ body.debug-mode .modal-foot {
 					<div class="flex-container img-carousel-row">
 						<div class="flex-group img-carousel-interval">
 							<label for="imgCarouselVal">轮播间隔</label>
-							<input type="number" id="imgCarouselVal" min="0" max="240" value="0" class="img-carousel-input">
+							<input type="number" id="imgCarouselVal" min="0" max="10080" value="0" class="img-carousel-input">
 							<label><input type="radio" name="imgCarUnit" value="min" checked onchange="imgCarouselUnitChanged()"> 分钟</label>
 							<label><input type="radio" name="imgCarUnit" value="hour" onchange="imgCarouselUnitChanged()"> 小时</label>
-							<span class="img-carousel-note">0=关，最低 5 分钟</span>
+							<span class="img-carousel-note" id="imgCarouselNote">0=关，最低 5 分钟</span>
 						</div>
 						<div class="flex-group">
 							<label>轮播模式</label>
@@ -3888,6 +3888,7 @@ let imgSlotRefreshTimer = null;
 let epdInitDone = false;
 /* Host treats build >=60 (0x3C) as multi-image capable. */
 const FW_IMG_MULTI_MIN = 0x3C;
+const FW_CAROUSEL_U16_MIN = 70;
 let imgMultiSupported = false;
 let canvas, ctx, textDecoder;
 /* GATT value length (ATT_MTU-3). 0 = unknown — do not assume 244 (breaks Mac). */
@@ -4771,17 +4772,39 @@ function imgCarouselUnit() {
   return el ? el.value : 'min';
 }
 
+function imgCarouselWideOk() {
+  return firmwareVersion != null && Number(firmwareVersion) >= FW_CAROUSEL_U16_MIN;
+}
+
+function imgCarouselHourMax() {
+  return imgCarouselWideOk() ? 168 : 4;
+}
+
+function imgCarouselMinMax() {
+  return imgCarouselWideOk() ? 10080 : 240;
+}
+
+function imgCarouselSyncNote() {
+  const note = document.getElementById('imgCarouselNote');
+  if (note) {
+    note.textContent = imgCarouselWideOk()
+      ? '0=关，最低 5 分钟，最长 7 天'
+      : '0=关，最低 5 分钟（当前固件小时最长 4）';
+  }
+}
+
 function imgCarouselApplyDeviceMinutes(mins) {
   imgCarouselDeviceMin = mins | 0;
   const el = document.getElementById('imgCarouselVal');
   if (!el) return;
   if (imgCarouselUnit() === 'hour') {
-    el.max = 4;
+    el.max = imgCarouselHourMax();
     el.value = (mins <= 0) ? '0' : String(Math.max(1, Math.round(mins / 60)));
   } else {
-    el.max = 240;
+    el.max = imgCarouselMinMax();
     el.value = String(mins);
   }
+  imgCarouselSyncNote();
 }
 
 function imgCarouselUnitChanged() {
@@ -5154,7 +5177,7 @@ async function imgSetCarousel() {
     await appAlert('轮播间隔最小为 5 分钟（填 0 可关闭）', '值无效');
     return;
   }
-  if (mins > 240) mins = 240;
+  if (mins > imgCarouselMinMax()) mins = imgCarouselMinMax();
   const mode = imgCarouselMode();
   if (mins !== 0) {
     const used = imgMaskUsedSlots().length;
@@ -5163,7 +5186,9 @@ async function imgSetCarousel() {
   imgCarouselDeviceMin = mins;
   imgCarouselDeviceMode = mode;
   const p = waitFlashNotify('img=car', 5000);
-  if (!await write(EpdCmd.IMG_CAROUSEL, [mins, mode], true)) {
+  if (!await write(EpdCmd.IMG_CAROUSEL, mins > 255
+    ? [mins & 0xFF, (mins >> 8) & 0xFF, mode]
+    : [mins & 0xFF, mode], true)) {
     await appAlert('设置命令发送失败', '设置失败');
     return;
   }
@@ -6117,6 +6142,7 @@ function handleNotify(value, idx) {
         if (Number.isFinite(build)) {
           firmwareVersion = build;
           noteImgMultiFromFirmwareVersion(firmwareVersion);
+          imgCarouselApplyDeviceMinutes(imgCarouselDeviceMin);
         }
         updateFirmwareVersionLog(firmwareVersionLabel);
       }
@@ -6226,6 +6252,7 @@ function handleNotify(value, idx) {
         firmwareVersion = parsed.build;
         if (!firmwareVersionLabel) firmwareVersionLabel = parsed.label;
         noteImgMultiFromFirmwareVersion(firmwareVersion);
+        imgCarouselApplyDeviceMinutes(imgCarouselDeviceMin);
       }
       const versionText = firmwareVersionLabel || (firmwareVersion != null ? `v2.0.0(b${firmwareVersion})` : '');
       updateFirmwareVersionLog(versionText);
