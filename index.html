@@ -3896,6 +3896,7 @@ let negotiatedMaxDataLen = 0;
 let rleSupport = false;
 var gattWriteChain = Promise.resolve();
 let reconnecting = false;
+let clockThemeFromDevice = false;
 const isAppleWebBle = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent || '');
 let flashOpActive = false;
 let epdBusy = false;
@@ -3971,7 +3972,7 @@ function looksLikeEpdTextNotify(data) {
     if (c < 32 || c > 126) return false;
     s += String.fromCharCode(c);
   }
-  return /^(device=|fwid=|fwver=|firmware_version=|mtu=|t=|led=|img=|imgr=|flash=)/.test(s);
+  return /^(device=|fwid=|fwver=|firmware_version=|mtu=|t=|led=|img=|imgr=|flash=|clock_theme=|calendar_theme=|ble_mode=|show_device_id=|temperature_offset=)/.test(s);
 }
 
 function scheduleImgSlotRefresh(delayMs) {
@@ -4395,6 +4396,7 @@ function resetVariables() {
   negotiatedMaxDataLen = 0;
   rleSupport = false;
   flashOpActive = false;
+  clockThemeFromDevice = false;
   document.getElementById("log").value = '';
   setLedSelect("0");
   if (typeof resetImgSlotUi === 'function') resetImgSlotUi();
@@ -6042,6 +6044,8 @@ function disconnect() {
   if (calendarThemeGroup) calendarThemeGroup.style.display = 'none';
   const clockThemeGroup = document.getElementById('clockThemeGroup');
   if (clockThemeGroup) clockThemeGroup.style.display = 'none';
+  const temperatureCalibrationGroup = document.getElementById('temperatureCalibrationGroup');
+  if (temperatureCalibrationGroup) temperatureCalibrationGroup.style.display = 'none';
   addLog('已断开连接.');
   document.getElementById("connectbutton").innerHTML = '连接';
 }
@@ -6099,8 +6103,28 @@ async function reConnect() {
   }, 400);
 }
 
+function parseClockThemeValue(raw) {
+  const n = parseInt(String(raw == null ? '' : raw).trim(), 10);
+  if (n === 0 || n === 1 || n === 2) return String(n);
+  return null;
+}
+
+function applyClockThemeFromDevice(raw) {
+  const v = parseClockThemeValue(raw);
+  if (v == null) return false;
+  setClockThemeSelect(v);
+  clockThemeFromDevice = true;
+  return true;
+}
+
 function handleNotify(value, idx) {
   const data = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  /* Image readback chunk: "im=" + u16le + data */
+  if (data.length >= 5 && data[0] === 0x69 && data[1] === 0x6d && data[2] === 0x3d) {
+    onImgBinaryChunk(data);
+    return;
+  }
+  const asConfig = !looksLikeEpdTextNotify(data) && data.length >= 16 && data.length <= 48;
   if (idx == 0 && !looksLikeEpdTextNotify(data)) {
     addLog(`收到配置：${bytes2hex(data)}`);
     const epdpins = document.getElementById("epdpins");
@@ -6112,13 +6136,11 @@ function handleNotify(value, idx) {
     epddriver.value = bytes2hex(data.slice(7, 8));
     updateDitcherOptions();
     updateDeviceControlVisibility();
+    applyConfigFeatureFields(data);
     addLog(`配置已读取，等待设备信息...`);
+  } else if (asConfig) {
+    applyConfigFeatureFields(data);
   } else {
-    /* Image readback chunk: "im=" + u16le + data */
-    if (data.length >= 5 && data[0] === 0x69 && data[1] === 0x6d && data[2] === 0x3d) {
-      onImgBinaryChunk(data);
-      return;
-    }
     if (textDecoder == null) textDecoder = new TextDecoder();
     const msg = textDecoder.decode(data);
     if (!(msg === 'flash=ack' || msg.startsWith('flash=ack:'))) {
@@ -6149,6 +6171,15 @@ function handleNotify(value, idx) {
     }
     if (/^img=\d+,/.test(msg) && !flashOpActive) {
       applyImgInfoNotify(msg);
+    }
+    const clockThemeMatch = /clock_theme\s*=\s*(-?\d+)/.exec(msg);
+    if (clockThemeMatch) {
+      if (applyClockThemeFromDevice(clockThemeMatch[1])) {
+        const themeText = { '0': '主题1', '1': '主题2', '2': '主题3' };
+        addLog(`时钟主题: ${themeText[clockThemeMatch[1]] || clockThemeMatch[1]}`);
+      }
+      const clockThemeGroup = document.getElementById('clockThemeGroup');
+      if (clockThemeGroup) clockThemeGroup.style.display = '';
     }
     if (msg.startsWith('mtu=') && msg.length > 4) {
       const mtuSize = parseInt(msg.substring(4), 10);
@@ -6225,17 +6256,6 @@ function handleNotify(value, idx) {
         '3': '主题4'
       };
       addLog(`日历主题: ${themeText[value] || value}`);
-    } else if (msg.startsWith('clock_theme=') && msg.length > 11) {
-      const value = msg.substring(12);
-      setClockThemeSelect(value);
-      // Show clock theme option when device sends clock_theme state (device supports this feature)
-      const clockThemeGroup = document.getElementById('clockThemeGroup');
-      if (clockThemeGroup) clockThemeGroup.style.display = '';
-      const themeText = {
-        '0': '主题1',
-        '1': '主题2'
-      };
-      addLog(`时钟主题: ${themeText[value] || value}`);
     } else if (msg.startsWith('temperature_offset=') && msg.length > 19) {
       // Parse signed integer (can be negative)
       const valueStr = msg.substring(19);
@@ -6286,10 +6306,10 @@ function setCalendarThemeSelect(value) {
 
 function setClockThemeSelect(value) {
   const select = document.getElementById('clockThemeSelect');
-  if (select) {
-    select.value = value;
-    select.dataset.prevValue = value;
-  }
+  const v = parseClockThemeValue(value);
+  if (!select || v == null) return;
+  select.value = v;
+  select.dataset.prevValue = v;
 }
 
 function setLedSelect(value) {
@@ -6499,6 +6519,7 @@ async function connect() {
   epdInitDone = true;
 
   document.getElementById("connectbutton").innerHTML = '断开';
+  showSmallDeviceControlGroups();
   updateButtonStatus();
   if (firmwareVersion != null) noteImgMultiFromFirmwareVersion(firmwareVersion);
   if (isSmallCarouselFwid(firmwareVariant)) noteImgMultiFromFwid(firmwareVariant);
@@ -7071,23 +7092,43 @@ function checkDebugMode() {
   }
 }
 
-// When 4.2" BWR (SSD1619/UC8176) is selected, show only: calendar mode, clock mode, clear screen, select date, send command.
-function updateDeviceControlVisibility() {
+function is42DriverSelected() {
   var epdDriverSelect = document.getElementById('epddriver');
-  if (!epdDriverSelect) return;
-  var opt = epdDriverSelect.options[epdDriverSelect.selectedIndex];
-  var is42 = opt && opt.getAttribute('data-size42') === 'true';
-  var groupsToHideWhen42 = ['ledSelectGroup', 'showDeviceIdGroup', 'bleModeGroup', 'calendarThemeGroup', 'clockThemeGroup', 'temperatureCalibrationGroup'];
+  var opt = epdDriverSelect && epdDriverSelect.options[epdDriverSelect.selectedIndex];
+  return !!(opt && opt.getAttribute('data-size42') === 'true');
+}
+
+function isConnectedGatt() {
+  return !!(gattServer && gattServer.connected);
+}
+
+/* This host is small-panel only. Do not wait for clock_theme= (old FW never sends it). */
+function showSmallDeviceControlGroups() {
+  if (is42DriverSelected()) return;
+  var ids = ['showDeviceIdGroup', 'bleModeGroup', 'calendarThemeGroup', 'clockThemeGroup', 'temperatureCalibrationGroup'];
+  for (var i = 0; i < ids.length; i++) {
+    var el = document.getElementById(ids[i]);
+    if (el) el.style.display = '';
+  }
+}
+
+// When 4.2" BWR is selected, hide small-only controls. Otherwise show them once connected.
+function updateDeviceControlVisibility() {
   var sendCmdGroup = document.getElementById('sendCmdGroup');
-  for (var i = 0; i < groupsToHideWhen42.length; i++) {
-    var el = document.getElementById(groupsToHideWhen42[i]);
-    if (el) {
-      if (groupsToHideWhen42[i] === 'ledSelectGroup' && is42) {
+  var is42 = is42DriverSelected();
+  var groups = ['ledSelectGroup', 'showDeviceIdGroup', 'bleModeGroup', 'calendarThemeGroup', 'clockThemeGroup', 'temperatureCalibrationGroup'];
+  if (is42) {
+    for (var i = 0; i < groups.length; i++) {
+      var el = document.getElementById(groups[i]);
+      if (!el) continue;
+      if (groups[i] === 'ledSelectGroup') {
         el.style.setProperty('display', 'none', 'important');
       } else {
         el.style.display = 'none';
       }
     }
+  } else if (isConnectedGatt()) {
+    showSmallDeviceControlGroups();
   }
   if (sendCmdGroup) {
     if (is42) {
@@ -7097,6 +7138,22 @@ function updateDeviceControlVisibility() {
       sendCmdGroup.style.display = '';
       sendCmdGroup.classList.add('debug');
     }
+  }
+}
+
+/* epd_config_t: led_mode=13, show_device_id=14, ble_mode=16, calendar_theme=17, clock_theme=18, temperature_offset=19 */
+function applyConfigFeatureFields(data) {
+  if (is42DriverSelected()) return;
+  showSmallDeviceControlGroups();
+  if (!data) return;
+  if (data.length > 13 && data[13] <= 6) setLedSelect(String(data[13]));
+  if (data.length > 14 && data[14] <= 1) setShowDeviceIdSelect(String(data[14]));
+  if (data.length > 16 && data[16] <= 3) setBleModeSelect(String(data[16]));
+  if (data.length > 17 && data[17] <= 3) setCalendarThemeSelect(String(data[17]));
+  if (!clockThemeFromDevice && data.length > 18) applyClockThemeFromDevice(data[18]);
+  if (data.length > 19 && data[19] !== 0xFF) {
+    var off = data[19] > 127 ? data[19] - 256 : data[19];
+    updateTemperatureOffsetDisplay(off);
   }
 }
 
