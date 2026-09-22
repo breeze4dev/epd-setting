@@ -1476,8 +1476,8 @@ body.debug-mode .modal-foot {
 					<select id="epddriver" onchange="updateDitcherOptions(); updateDeviceControlVisibility();">
 						<option value="06" data-color="threeColor" data-size="2.13_250_122">2.13寸 三色 (SSD16xx)</option>
 						<option value="08" data-color="threeColor" data-size="2.13_250_122">2.13寸 三色 CE (SSD16xx)</option>
-						<option value="0a" data-color="blackWhiteColor" data-size="2.13_212_104">2.13寸 黑白 (SSD16xx)</option>
-						<option value="0b" data-color="blackWhiteColor" data-size="2.13_212_104" selected>2.13寸 黑白 CE (SSD16xx)</option>
+						<option value="0a" data-color="blackWhiteColor" data-size="2.13_212_104" selected>2.13寸 黑白 (SSD16xx)</option>
+						<option value="0b" data-color="blackWhiteColor" data-size="2.13_212_104">2.13寸 黑白 CE (SSD16xx)</option>
 						<option value="07" data-color="threeColor" data-size="2.9_296_128">2.9寸 三色 (SSD16xx)</option>
 						<option value="09" data-color="threeColor" data-size="2.9_296_128">2.9寸 三色 CE (SSD16xx)</option>
 					</select>
@@ -3897,6 +3897,7 @@ let rleSupport = false;
 var gattWriteChain = Promise.resolve();
 let reconnecting = false;
 let clockThemeFromDevice = false;
+let epdConfigParsed = false;
 const isAppleWebBle = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent || '');
 let flashOpActive = false;
 let epdBusy = false;
@@ -4397,6 +4398,7 @@ function resetVariables() {
   rleSupport = false;
   flashOpActive = false;
   clockThemeFromDevice = false;
+  epdConfigParsed = false;
   document.getElementById("log").value = '';
   setLedSelect("0");
   if (typeof resetImgSlotUi === 'function') resetImgSlotUi();
@@ -6117,6 +6119,19 @@ function applyClockThemeFromDevice(raw) {
   return true;
 }
 
+function selectEpdDriverHex(hex) {
+  const el = document.getElementById("epddriver");
+  if (!el || hex == null) return false;
+  const want = String(hex).toLowerCase();
+  for (let i = 0; i < el.options.length; i++) {
+    if (el.options[i].value.toLowerCase() === want) {
+      el.selectedIndex = i;
+      return true;
+    }
+  }
+  return false;
+}
+
 function handleNotify(value, idx) {
   const data = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
   /* Image readback chunk: "im=" + u16le + data */
@@ -6125,20 +6140,21 @@ function handleNotify(value, idx) {
     return;
   }
   const asConfig = !looksLikeEpdTextNotify(data) && data.length >= 16 && data.length <= 48;
-  if (idx == 0 && !looksLikeEpdTextNotify(data)) {
+  if (!epdConfigParsed && !looksLikeEpdTextNotify(data) && data.length >= 8) {
     addLog(`收到配置：${bytes2hex(data)}`);
     const epdpins = document.getElementById("epdpins");
-    const epddriver = document.getElementById("epddriver");
     epdpins.value = bytes2hex(data.slice(0, 7));
     if (data.length > 10) epdpins.value += bytes2hex(data.slice(10, 11));
     const keyEl = document.getElementById("epdkeypin");
     if (keyEl && data.length > 8) keyEl.value = String(data[8]);
-    epddriver.value = bytes2hex(data.slice(7, 8));
+    selectEpdDriverHex(bytes2hex(data.slice(7, 8)));
     updateDitcherOptions();
     updateDeviceControlVisibility();
     applyConfigFeatureFields(data);
+    epdConfigParsed = true;
     addLog(`配置已读取，等待设备信息...`);
   } else if (asConfig) {
+    selectEpdDriverHex(bytes2hex(data.slice(7, 8)));
     applyConfigFeatureFields(data);
   } else {
     if (textDecoder == null) textDecoder = new TextDecoder();
@@ -6714,6 +6730,7 @@ function updateUIForDevice() {
   for (let i = 0; i < epddriver.options.length; i++) {
     if (epddriver.options[i].value.toLowerCase() === modelIdHex.toLowerCase()) {
       driverIndex = i;
+      selectEpdDriverHex(modelIdHex);
       const option = epddriver.options[i];
       correctCanvasSize = option.getAttribute('data-size');
       correctColorMode = option.getAttribute('data-color');
